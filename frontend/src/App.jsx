@@ -1,279 +1,185 @@
 import React, { useState } from "react";
 
-function App() {
-    const [isEditing, setIsEditing] = useState(false);
+export default function App() {
+  const [step, setStep] = useState(1);
+  
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [gender, setGender] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
 
-    const [user, setUser] = useState({
-        name: "Melikhan Demirkale",
-        email: "melikhan@mail.com",
-        phone: "+90 555 000 00 00",
-        address: "Istanbul, Turkey",
-    });
+  // Variables to check password rules
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasMinLength = password.length >= 8;
+  
+  // To store password is valid
+  const isPasswordValid = hasUppercase && hasLowercase && hasNumber && hasMinLength;
 
-    const [formData, setFormData] = useState(user);
+  const handleNext = (e) => {
+    e.preventDefault();
+    if (email) setStep(2);
+  };
 
-    const handleEditClick = () => {
-        setFormData(user);
-        setIsEditing(true);
-    };
+  const handleSubmit = (e) => {
+    e.preventDefault(); 
+    
+    // Prevent submission if password rules are not okey
+    if (!isPasswordValid) {
+      setError("Please meet all password requirements before continuing.");
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setError("Passwords do not match!");
+      return;
+    }
+    
+    setError(""); 
+    console.log("New Account Registered:", { email, username, fullName, gender, password });
+    alert(`Welcome ${username}! Your account has been successfully created.`);
+  };
 
-    const handleCancelClick = () => {
-        setFormData(user);
-        setIsEditing(false);
-    };
-
-    const handleSaveClick = () => {
-        setUser(formData);
-        setIsEditing(false);
-    };
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
-    };
-
-    return (
-        <div style={styles.page}>
-            <div style={styles.card}>
-                <div style={styles.avatar}>M</div>
-
-                <h1 style={styles.title}>User Profile</h1>
-                <p style={styles.subtitle}>Manage your personal information</p>
-
-                {!isEditing ? (
-                    <div style={styles.infoContainer}>
-                        <div style={styles.infoRow}>
-                            <span style={styles.label}>Full Name</span>
-                            <span style={styles.value}>{user.name}</span>
-                        </div>
-
-                        <div style={styles.infoRow}>
-                            <span style={styles.label}>Email</span>
-                            <span style={styles.value}>{user.email}</span>
-                        </div>
-
-                        <div style={styles.infoRow}>
-                            <span style={styles.label}>Phone</span>
-                            <span style={styles.value}>{user.phone}</span>
-                        </div>
-
-                        <div style={styles.infoRow}>
-                            <span style={styles.label}>Address</span>
-                            <span style={styles.value}>{user.address}</span>
-                        </div>
-
-                        <div style={styles.buttonGroup}>
-                            <button style={styles.primaryButton} onClick={handleEditClick}>
-                                Edit Profile
-                            </button>
-                            <button style={styles.logoutButton}>Logout</button>
-                        </div>
-                    </div>
-                ) : (
-                    <div style={styles.formContainer}>
-                        <label style={styles.inputLabel}>Full Name</label>
-                        <input
-                            style={styles.input}
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                        />
-
-                        <label style={styles.inputLabel}>Email</label>
-                        <input
-                            style={styles.input}
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                        />
-
-                        <label style={styles.inputLabel}>Phone</label>
-                        <input
-                            style={styles.input}
-                            type="text"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                        />
-
-                        <label style={styles.inputLabel}>Address</label>
-                        <textarea
-                            style={styles.textarea}
-                            name="address"
-                            value={formData.address}
-                            onChange={handleChange}
-                        />
-
-                        <div style={styles.buttonGroup}>
-                            <button style={styles.saveButton} onClick={handleSaveClick}>
-                                Save Changes
-                            </button>
-                            <button style={styles.cancelButton} onClick={handleCancelClick}>
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
+  return (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+      fontFamily: '"Inter", sans-serif' 
+    }}>
+      <div style={{ 
+        width: "100%", 
+        maxWidth: "420px", 
+        padding: "40px", 
+        backgroundColor: "white", 
+        borderRadius: "16px", 
+        boxShadow: "0 15px 30px rgba(0,0,0,0.3)" 
+      }}>
+        
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+          <span style={{ height: "8px", width: "40px", borderRadius: "4px", backgroundColor: step >= 1 ? "#1e3c72" : "#e0e0e0", marginRight: "8px", transition: "0.3s" }}></span>
+          <span style={{ height: "8px", width: "40px", borderRadius: "4px", backgroundColor: step >= 2 ? "#1e3c72" : "#e0e0e0", transition: "0.3s" }}></span>
         </div>
-    );
+
+        <h2 style={{ textAlign: "center", color: "#333", marginBottom: "8px", fontSize: "28px" }}>Create Account</h2>
+        <p style={{ textAlign: "center", color: "#777", marginBottom: "30px", fontSize: "14px" }}>
+          {step === 1 ? "Let's start with your email" : "Tell us more about yourself"}
+        </p>
+        
+        {step === 1 && (
+          <form onSubmit={handleNext}>
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{ display: "block", marginBottom: "6px", color: "#444", fontSize: "14px", fontWeight: "500" }}>Email Address</label>
+              <input
+                type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus
+                style={{ width: "100%", padding: "12px", border: "1px solid #ddd", borderRadius: "8px", boxSizing: "border-box", outline: "none", fontSize: "16px" }}
+                placeholder="name@example.com"
+              />
+            </div>
+            <button 
+              type="submit" 
+              style={{ width: "100%", padding: "14px", backgroundColor: "#1e3c72", color: "white", border: "none", borderRadius: "8px", fontSize: "16px", cursor: "pointer", fontWeight: "bold" }}
+            >
+              Continue
+            </button>
+          </form>
+        )}
+
+        {step === 2 && (
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", marginBottom: "6px", color: "#444", fontSize: "14px", fontWeight: "500" }}>Username</label>
+                <input
+                  type="text" value={username} onChange={(e) => setUsername(e.target.value)} required
+                  style={{ width: "100%", padding: "12px", border: "1px solid #ddd", borderRadius: "8px", boxSizing: "border-box", outline: "none" }}
+                  placeholder="akif_senturk"
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", marginBottom: "6px", color: "#444", fontSize: "14px", fontWeight: "500" }}>Gender</label>
+                <select 
+                  value={gender} onChange={(e) => setGender(e.target.value)} required
+                  style={{ width: "100%", padding: "12px", border: "1px solid #ddd", borderRadius: "8px", boxSizing: "border-box", outline: "none", backgroundColor: "white" }}
+                >
+                  <option value="" disabled>Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", color: "#444", fontSize: "14px", fontWeight: "500" }}>Full Name</label>
+              <input
+                type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required
+                style={{ width: "100%", padding: "12px", border: "1px solid #ddd", borderRadius: "8px", boxSizing: "border-box", outline: "none" }}
+                placeholder="Akif Senturk"
+              />
+            </div>
+
+            {/* PASSWORD FIELD AND REAL-TIME CONTROLS */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", color: "#444", fontSize: "14px", fontWeight: "500" }}>Password</label>
+              <input
+                type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                style={{ width: "100%", padding: "12px", border: "1px solid #ddd", borderRadius: "8px", boxSizing: "border-box", outline: "none" }}
+                placeholder="Create a strong password"
+              />
+              
+              {/* Dynamic Password Rules List */}
+              <ul style={{ listStyle: "none", padding: "0", marginTop: "8px", fontSize: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <li style={{ color: hasMinLength ? "#2e7d32" : "#d32f2f", transition: "color 0.3s" }}>
+                  {hasMinLength ? "✓" : "✗"} At least 8 characters
+                </li>
+                <li style={{ color: hasUppercase ? "#2e7d32" : "#d32f2f", transition: "color 0.3s" }}>
+                  {hasUppercase ? "✓" : "✗"} At least 1 uppercase letter
+                </li>
+                <li style={{ color: hasLowercase ? "#2e7d32" : "#d32f2f", transition: "color 0.3s" }}>
+                  {hasLowercase ? "✓" : "✗"} At least 1 lowercase letter
+                </li>
+                <li style={{ color: hasNumber ? "#2e7d32" : "#d32f2f", transition: "color 0.3s" }}>
+                  {hasNumber ? "✓" : "✗"} At least 1 number
+                </li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{ display: "block", marginBottom: "6px", color: "#444", fontSize: "14px", fontWeight: "500" }}>Confirm Password</label>
+              <input
+                type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required
+                style={{ width: "100%", padding: "12px", border: "1px solid #ddd", borderRadius: "8px", boxSizing: "border-box", outline: "none" }}
+                placeholder="Repeat your password"
+              />
+              {error && <p style={{ color: "#d32f2f", fontSize: "13px", marginTop: "8px", marginBottom: "0", fontWeight: "500" }}>{error}</p>}
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button 
+                type="button" 
+                onClick={() => setStep(1)}
+                style={{ flex: 1, padding: "14px", backgroundColor: "#f5f5f5", color: "#333", border: "1px solid #ddd", borderRadius: "8px", fontSize: "16px", cursor: "pointer", fontWeight: "bold" }}
+              >
+                Back
+              </button>
+              <button 
+                type="submit" 
+                style={{ flex: 2, padding: "14px", backgroundColor: "#1e3c72", color: "white", border: "none", borderRadius: "8px", fontSize: "16px", cursor: "pointer", fontWeight: "bold", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", opacity: isPasswordValid ? 1 : 0.7 }}
+              >
+                Sign Up
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
 }
-
-const styles = {
-    page: {
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "linear-gradient(135deg, #0f172a, #1e293b)",
-        padding: "20px",
-        boxSizing: "border-box",
-        fontFamily: "Arial, sans-serif",
-    },
-    card: {
-        width: "100%",
-        maxWidth: "500px",
-        backgroundColor: "#1e293b",
-        borderRadius: "18px",
-        padding: "32px",
-        boxSizing: "border-box",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-        color: "white",
-    },
-    avatar: {
-        width: "90px",
-        height: "90px",
-        borderRadius: "50%",
-        backgroundColor: "#3b82f6",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        fontSize: "36px",
-        fontWeight: "bold",
-        margin: "0 auto 20px auto",
-    },
-    title: {
-        textAlign: "center",
-        margin: "0 0 8px 0",
-        fontSize: "36px",
-    },
-    subtitle: {
-        textAlign: "center",
-        margin: "0 0 28px 0",
-        color: "#cbd5e1",
-        fontSize: "15px",
-    },
-    infoContainer: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-    },
-    infoRow: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "6px",
-        backgroundColor: "#0f172a",
-        padding: "14px",
-        borderRadius: "10px",
-    },
-    label: {
-        fontSize: "13px",
-        color: "#94a3b8",
-        fontWeight: "bold",
-    },
-    value: {
-        fontSize: "16px",
-        color: "#f8fafc",
-    },
-    formContainer: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
-    },
-    inputLabel: {
-        fontSize: "14px",
-        color: "#cbd5e1",
-        marginTop: "4px",
-    },
-    input: {
-        padding: "12px",
-        borderRadius: "8px",
-        border: "1px solid #475569",
-        outline: "none",
-        backgroundColor: "#0f172a",
-        color: "white",
-        fontSize: "14px",
-    },
-    textarea: {
-        padding: "12px",
-        borderRadius: "8px",
-        border: "1px solid #475569",
-        outline: "none",
-        backgroundColor: "#0f172a",
-        color: "white",
-        fontSize: "14px",
-        minHeight: "80px",
-        resize: "vertical",
-    },
-    buttonGroup: {
-        display: "flex",
-        gap: "12px",
-        marginTop: "22px",
-        flexWrap: "wrap",
-    },
-    primaryButton: {
-        flex: 1,
-        minWidth: "140px",
-        padding: "12px",
-        backgroundColor: "#3b82f6",
-        color: "white",
-        border: "none",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "14px",
-        fontWeight: "bold",
-    },
-    logoutButton: {
-        flex: 1,
-        minWidth: "140px",
-        padding: "12px",
-        backgroundColor: "#ef4444",
-        color: "white",
-        border: "none",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "14px",
-        fontWeight: "bold",
-    },
-    saveButton: {
-        flex: 1,
-        minWidth: "140px",
-        padding: "12px",
-        backgroundColor: "#22c55e",
-        color: "white",
-        border: "none",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "14px",
-        fontWeight: "bold",
-    },
-    cancelButton: {
-        flex: 1,
-        minWidth: "140px",
-        padding: "12px",
-        backgroundColor: "#64748b",
-        color: "white",
-        border: "none",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "14px",
-        fontWeight: "bold",
-    },
-};
-
-export default App;
