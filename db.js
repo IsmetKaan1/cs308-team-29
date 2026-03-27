@@ -1,13 +1,20 @@
-const mongoose = require('mongoose');
+const Database = require('better-sqlite3');
+const path = require('path');
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB Connected ✅');
-  } catch (err) {
-    console.error('Connection failed ❌', err.message);
-    process.exit(1);
-  }
-};
+const db = new Database(path.join(__dirname, 'app.db'));
 
-module.exports = connectDB;
+db.pragma('journal_mode = WAL');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    full_name TEXT NOT NULL,
+    gender TEXT NOT NULL,
+    password TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+module.exports = db;
