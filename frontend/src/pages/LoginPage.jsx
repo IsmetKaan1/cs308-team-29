@@ -31,6 +31,13 @@ export default function LoginPage() {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <button 
+          className="btn-secondary" 
+          onClick={() => navigate('/')} 
+          style={{ marginBottom: '20px', padding: '8px 12px', width: 'auto', alignSelf: 'flex-start', display: 'flex', gap: '6px' }}
+        >
+          &larr; Back to Home
+        </button>
         <h2>Welcome Back</h2>
         <p className="subtitle">Sign in to your account</p>
 

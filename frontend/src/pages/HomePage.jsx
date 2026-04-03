@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ProductCard from '../components/ProductCard';
 import CartIcon from '../components/CartIcon';
+import ProfileIcon from '../components/ProfileIcon';
 import CartSidebar from '../components/CartSidebar';
 import { api } from '../api';
 
@@ -20,7 +21,10 @@ const HomePage = () => {
     <div style={styles.container}>
       <div style={styles.topBar}>
         <h1 style={styles.header}>CS Dersleri</h1>
-        <CartIcon />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <CartIcon />
+          <ProfileIcon />
+        </div>
       </div>
       {loading && <p style={styles.status}>Yükleniyor...</p>}
       {error && <p style={{ ...styles.status, color: '#fca5a5' }}>{error}</p>}
