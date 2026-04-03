@@ -54,6 +54,13 @@ export default function RegisterPage() {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <button 
+          className="btn-secondary" 
+          onClick={() => navigate('/login')} 
+          style={{ marginBottom: '15px', padding: '8px 12px', width: 'auto', alignSelf: 'flex-start', display: 'flex', gap: '6px' }}
+        >
+          &larr; Back to Login
+        </button>
         <div className="step-indicator">
           <span className={`step-dot ${step >= 1 ? 'active' : ''}`} />
           <span className={`step-dot ${step >= 2 ? 'active' : ''}`} />

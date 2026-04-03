@@ -90,6 +90,7 @@ export default function ProfileSettingsPage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('authChange'));
     navigate('/login');
   };
 
