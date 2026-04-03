@@ -7,6 +7,7 @@ import { api } from '../api';
 
 const HomePage = () => {
   const [products, setProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -26,12 +27,27 @@ const HomePage = () => {
           <ProfileIcon />
         </div>
       </div>
+      <div style={{ marginBottom: '30px' }}>
+        <input
+          type="text"
+          placeholder="Ders ara (isim, kod veya içerik)..."
+          className="form-input"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
       {loading && <p style={styles.status}>Yükleniyor...</p>}
       {error && <p style={{ ...styles.status, color: '#fca5a5' }}>{error}</p>}
       <div style={styles.grid}>
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {products
+          .filter(product => 
+            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.description.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
       </div>
       <CartSidebar />
     </div>
