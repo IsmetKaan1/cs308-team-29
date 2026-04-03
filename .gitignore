@@ -3,3 +3,9 @@ node_modules/
 app.db
 app.db-shm
 app.db-wal
+docker-compose.yml
+backend/data/
+backend/Dockerfile
+backend/.dockerignore
+frontend/Dockerfile
+frontend/.dockerignore
