@@ -19,6 +19,7 @@ export default function LoginPage() {
       const data = await api.post('/api/login', { email, password });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      window.dispatchEvent(new Event('authChange'));
       navigate('/');
     } catch (err) {
       setError(err.message);

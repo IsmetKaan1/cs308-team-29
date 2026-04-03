@@ -1,4 +1,5 @@
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { api } from '../api';
 
 const CartContext = createContext(null);
 
@@ -13,6 +14,10 @@ function cartReducer(state, action) {
   let items;
 
   switch (action.type) {
+    case 'SET_CART':
+      items = action.items;
+      return { ...state, items, ...calcTotals(items) };
+
     case 'ADD_ITEM': {
       const existing = state.items.find((i) => i.id === action.product.id);
       if (existing) {
@@ -64,6 +69,35 @@ const initialState = {
 
 export function CartProvider({ children }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    function loadCart() {
+      if (localStorage.getItem('token')) {
+        api.get('/api/cart')
+          .then(cart => {
+            dispatch({ type: 'SET_CART', items: cart.items || [] });
+            setIsLoaded(true);
+          })
+          .catch(() => setIsLoaded(true));
+      } else {
+        dispatch({ type: 'CLEAR_CART' });
+        setIsLoaded(true);
+      }
+    }
+    loadCart();
+    
+    window.addEventListener('authChange', loadCart);
+    return () => window.removeEventListener('authChange', loadCart);
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded && localStorage.getItem('token')) {
+       // Debounce or directly save
+       api.post('/api/cart', { items: state.items }).catch(console.error);
+    }
+  }, [state.items, isLoaded]);
+
   return <CartContext.Provider value={{ state, dispatch }}>{children}</CartContext.Provider>;
 }
 

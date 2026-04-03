@@ -11,6 +11,8 @@ const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const productRoutes = require('./routes/products');
 const usbRoutes = require('./routes/usb');
+const cartRoutes = require('./routes/cart');
+const connectMongoDB = require('./mongoDb');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,10 +20,13 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+connectMongoDB();
+
 app.use('/api', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/usb', usbRoutes);
+app.use('/api/cart', cartRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
