@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../api';
 
 export default function ProfileSettingsPage() {
   const navigate = useNavigate();
@@ -26,13 +27,7 @@ export default function ProfileSettingsPage() {
       return;
     }
 
-    fetch('http://localhost:3001/api/profile', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Session expired');
-        return res.json();
-      })
+    api.get('/api/profile')
       .then((data) => {
         setUser(data);
         setUsername(data.username);
@@ -53,15 +48,7 @@ export default function ProfileSettingsPage() {
     setSaving(true);
 
     try {
-      const res = await fetch('http://localhost:3001/api/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ username, fullName, gender }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
+      const data = await api.put('/api/profile', { username, fullName, gender });
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data));
       setMessage('Profile updated successfully!');
@@ -88,15 +75,7 @@ export default function ProfileSettingsPage() {
 
     setPwSaving(true);
     try {
-      const res = await fetch('http://localhost:3001/api/profile/password', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
+      await api.put('/api/profile/password', { currentPassword, newPassword });
       setPwMessage('Password changed successfully!');
       setCurrentPassword('');
       setNewPassword('');
