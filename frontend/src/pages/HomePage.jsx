@@ -7,6 +7,7 @@ import { api } from '../api';
 
 const HomePage = () => {
     const [products, setProducts] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [sortOption, setSortOption] = useState('');
@@ -18,7 +19,13 @@ const HomePage = () => {
             .finally(() => setLoading(false));
     }, []);
 
-    const sortedProducts = [...products];
+    const filteredProducts = products.filter((product) =>
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const sortedProducts = [...filteredProducts];
 
     if (sortOption === 'price-asc') {
         sortedProducts.sort((a, b) => a.price - b.price);
@@ -34,6 +41,16 @@ const HomePage = () => {
                     <CartIcon />
                     <ProfileIcon />
                 </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+                <input
+                    type="text"
+                    placeholder="Ders ara (isim, kod veya içerik)..."
+                    className="form-input"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
             </div>
 
             <div style={styles.sortBar}>
