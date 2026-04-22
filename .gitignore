@@ -9,3 +9,4 @@ backend/Dockerfile
 backend/.dockerignore
 frontend/Dockerfile
 frontend/.dockerignore
+.DS_Store
