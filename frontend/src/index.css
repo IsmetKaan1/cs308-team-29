@@ -636,3 +636,14 @@ body {
     position: static;
   }
 }
+
+/* Order confirmation */
+.confirmation-address {
+  background: #f9f9f9;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 28px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #444;
+}

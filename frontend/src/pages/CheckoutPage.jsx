@@ -1,16 +1,62 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { api } from '../api';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { state } = useCart();
+  const { state, dispatch } = useCart();
 
   const [fullName, setFullName] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [country, setCountry] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const isGuest = !localStorage.getItem('token');
+
+  if (isGuest) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card" style={{ textAlign: 'center' }}>
+          <h2>Giriş Gerekli</h2>
+          <p className="subtitle">Ödeme sayfasına devam etmek için lütfen giriş yapın.</p>
+          <button className="btn-primary" onClick={() => navigate('/login')}>
+            Giriş Yap
+          </button>
+          <div className="link-text" style={{ marginTop: 16 }}>
+            Hesabınız yok mu?{' '}
+            <a
+              href="/register"
+              onClick={(e) => { e.preventDefault(); navigate('/register'); }}
+            >
+              Kayıt Ol
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const order = await api.post('/api/orders', {
+        items: state.items,
+        shippingAddress: { fullName, address, city, postalCode, country },
+      });
+      dispatch({ type: 'CLEAR_CART' });
+      navigate('/order-confirmation', { state: { order } });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="settings-container">
@@ -25,7 +71,9 @@ export default function CheckoutPage() {
         <div className="settings-card checkout-form-card">
           <h2>Teslimat Adresi</h2>
 
-          <form>
+          {error && <div className="error-message">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Ad Soyad</label>
               <input
@@ -87,8 +135,12 @@ export default function CheckoutPage() {
               />
             </div>
 
-            <button type="submit" className="btn-primary" disabled>
-              Siparişi Tamamla
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={submitting || state.items.length === 0}
+            >
+              {submitting ? 'İşleniyor...' : 'Siparişi Tamamla'}
             </button>
           </form>
         </div>
