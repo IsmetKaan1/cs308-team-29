@@ -1,7 +1,14 @@
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
 const CartSidebar = () => {
+  const navigate = useNavigate();
   const { state, dispatch } = useCart();
+
+  function handleCheckout() {
+    dispatch({ type: 'CLOSE_CART' });
+    navigate('/checkout');
+  }
 
   if (!state.isOpen) return null;
 
@@ -67,7 +74,7 @@ const CartSidebar = () => {
               <span>Toplam</span>
               <span>{state.totalPrice.toFixed(2)} ₺</span>
             </div>
-            <button className="cart-checkout-btn">Satın Al</button>
+            <button className="cart-checkout-btn" onClick={handleCheckout}>Satın Al</button>
             <button
               className="cart-clear-btn"
               onClick={() => dispatch({ type: 'CLEAR_CART' })}
