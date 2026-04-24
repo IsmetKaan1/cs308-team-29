@@ -23,9 +23,9 @@ const productSchema = new Schema({
   },
   stock: { type: Number, default: null },
   serialNumber: { type: String, required: true, unique: true },
-  warrantyMonths: { type: Number, default: 0, min: 0 },
-  distributorInfo: { type: String, default: '' },
-  model: { type: String, default: '' },
+  warrantyMonths: { type: Number, required: true, min: 0 },
+  distributorInfo: { type: String, required: true, trim: true, minlength: 1 },
+  model: { type: String, required: true, trim: true, minlength: 1 },
   quantityInStock: { type: Number, required: true, min: 0 },
   createdAt: { type: Date, default: Date.now },
 });
