@@ -1358,6 +1358,86 @@ input, select, textarea {
 }
 .order-meta-row strong { color: var(--color-ink-900); }
 
+.invoice-viewer {
+  margin: var(--space-6) 0 var(--space-5);
+  background: var(--color-ink-50);
+  border: 1px solid var(--color-ink-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.invoice-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-ink-200);
+  flex-wrap: wrap;
+}
+
+.invoice-viewer-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.invoice-viewer-title strong {
+  font-size: var(--fs-14);
+  color: var(--color-ink-900);
+}
+.invoice-viewer-title span {
+  font-size: var(--fs-12);
+  color: var(--color-ink-500);
+}
+
+.invoice-viewer-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.invoice-viewer-frame {
+  width: 100%;
+  height: 720px;
+  border: none;
+  display: block;
+  background: var(--color-white);
+}
+
+.invoice-viewer-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  height: 360px;
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-ink-500);
+  background: var(--color-white);
+}
+
+.invoice-toast {
+  margin-top: var(--space-3);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-50);
+  color: var(--color-success-700);
+  border: 1px solid var(--color-success-100);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .invoice-viewer-frame { height: 540px; }
+  .invoice-viewer-header { flex-direction: column; align-items: stretch; }
+  .invoice-viewer-actions { justify-content: stretch; }
+  .invoice-viewer-actions .btn { flex: 1; }
+}
+
 /* ========================================================================
    ORDERS PAGE
    ======================================================================== */
