@@ -2,10 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Review = require('../models/Review');
+const Order = require('../models/Order');
 
 const router = express.Router();
 
-async function aggregateForProductIds(productIds) {
+async function aggregateReviewsForProductIds(productIds) {
   if (!productIds.length) return new Map();
   const rows = await Review.aggregate([
     { $match: { productId: { $in: productIds }, status: 'approved' } },
@@ -28,9 +29,29 @@ async function aggregateForProductIds(productIds) {
   );
 }
 
-function attachAggregate(productJson, agg) {
-  const meta = agg || { averageRating: 0, reviewCount: 0 };
-  return { ...productJson, averageRating: meta.averageRating, reviewCount: meta.reviewCount };
+async function aggregateSalesForProductIds(productIds) {
+  if (!productIds.length) return new Map();
+  const rows = await Order.aggregate([
+    { $unwind: '$items' },
+    { $match: { 'items.productId': { $in: productIds } } },
+    {
+      $group: {
+        _id: '$items.productId',
+        salesCount: { $sum: '$items.quantity' },
+      },
+    },
+  ]);
+  return new Map(rows.map((r) => [String(r._id), r.salesCount || 0]));
+}
+
+function attachAggregate(productJson, review, salesCount) {
+  const r = review || { averageRating: 0, reviewCount: 0 };
+  return {
+    ...productJson,
+    averageRating: r.averageRating,
+    reviewCount: r.reviewCount,
+    salesCount: Number.isFinite(salesCount) ? salesCount : 0,
+  };
 }
 
 router.get('/categories', (req, res) => {
@@ -50,8 +71,20 @@ router.get('/', async (req, res) => {
     }
 
     const products = await Product.find(filter).sort('_id');
-    const aggMap = await aggregateForProductIds(products.map((p) => p._id));
-    res.json(products.map((p) => attachAggregate(p.toJSON(), aggMap.get(String(p._id)))));
+    const ids = products.map((p) => p._id);
+    const [reviewMap, salesMap] = await Promise.all([
+      aggregateReviewsForProductIds(ids),
+      aggregateSalesForProductIds(ids),
+    ]);
+    res.json(
+      products.map((p) =>
+        attachAggregate(
+          p.toJSON(),
+          reviewMap.get(String(p._id)),
+          salesMap.get(String(p._id))
+        )
+      )
+    );
   } catch (error) {
     console.error('Failed to get products:', error);
     res.status(500).json({ error: 'Server error' });
@@ -67,8 +100,17 @@ router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ error: 'Product not found.' });
-    const aggMap = await aggregateForProductIds([product._id]);
-    res.json(attachAggregate(product.toJSON(), aggMap.get(String(product._id))));
+    const [reviewMap, salesMap] = await Promise.all([
+      aggregateReviewsForProductIds([product._id]),
+      aggregateSalesForProductIds([product._id]),
+    ]);
+    res.json(
+      attachAggregate(
+        product.toJSON(),
+        reviewMap.get(String(product._id)),
+        salesMap.get(String(product._id))
+      )
+    );
   } catch (error) {
     console.error('Failed to get product:', error);
     res.status(500).json({ error: 'Could not load the product.' });
