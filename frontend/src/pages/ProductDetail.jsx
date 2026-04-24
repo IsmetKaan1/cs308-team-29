@@ -5,6 +5,8 @@ import { useCart } from '../context/cartStore';
 import AppHeader from '../components/AppHeader';
 import CartSidebar from '../components/CartSidebar';
 import Spinner from '../components/Spinner';
+import ProductReviews from '../components/ProductReviews';
+import Stars from '../components/Stars';
 
 const ProductDetail = () => {
   const navigate = useNavigate();
@@ -53,6 +55,13 @@ const ProductDetail = () => {
       <div className="detail-card">
         <span className="product-card-badge">{product.code}</span>
         <h1 className="detail-title">{product.name}</h1>
+        {product.reviewCount > 0 && (
+          <div className="rating-summary" style={{ marginBottom: 'var(--space-3)' }}>
+            <Stars value={product.averageRating} size="lg" />
+            <span className="rating-summary-value">{product.averageRating.toFixed(1)}</span>
+            <span className="rating-summary-count">({product.reviewCount} değerlendirme)</span>
+          </div>
+        )}
         <p className="detail-desc">{product.description}</p>
 
         <div className="detail-info-grid">
@@ -93,6 +102,13 @@ const ProductDetail = () => {
       <main className="page-body">
         <div className="container-md">
           {renderBody()}
+          {!loading && !error && product && (
+            <ProductReviews
+              productId={product.id || id}
+              initialAverage={product.averageRating || 0}
+              initialCount={product.reviewCount || 0}
+            />
+          )}
         </div>
       </main>
       <CartSidebar />
