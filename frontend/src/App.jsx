@@ -6,6 +6,7 @@ import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import HomePage from './pages/HomePage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import ProductDetail from './pages/ProductDetail';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>
