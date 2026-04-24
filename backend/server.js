@@ -13,6 +13,7 @@ const productRoutes = require('./routes/products');
 const usbRoutes = require('./routes/usb');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
+const seedRoutes = require('./routes/seed');
 const connectMongoDB = require('./mongoDb');
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/usb', usbRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/seed', seedRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
