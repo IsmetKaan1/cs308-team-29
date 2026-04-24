@@ -1,7 +1,11 @@
-import { useCart } from '../context/CartContext';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/cartStore';
 
 const ProductCard = ({ product }) => {
+  const navigate = useNavigate();
   const { dispatch } = useCart();
+  const availableStock = product.quantityInStock ?? product.stock;
+  const isOutOfStock = availableStock != null && availableStock <= 0;
 
   return (
     <div style={styles.card}>
@@ -10,10 +14,17 @@ const ProductCard = ({ product }) => {
       <p style={styles.description}>{product.description}</p>
       <div style={styles.price}>{product.price.toFixed(2)} ₺</div>
       <button
-        style={styles.button}
+        style={{ ...styles.button, ...(isOutOfStock ? styles.disabledButton : {}) }}
+        disabled={isOutOfStock}
         onClick={() => dispatch({ type: 'ADD_ITEM', product })}
       >
-        Sepete Ekle
+        {isOutOfStock ? 'Stokta Yok' : 'Sepete Ekle'}
+      </button>
+      <button
+        style={styles.secondaryButton}
+        onClick={() => navigate(`/product/${product.id}`)}
+      >
+        Detayları Gör
       </button>
     </div>
   );
@@ -48,6 +59,21 @@ const styles = {
     backgroundColor: '#000',
     color: '#fff',
     border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    width: '100%',
+    fontWeight: 'bold',
+  },
+  disabledButton: {
+    backgroundColor: '#9ca3af',
+    cursor: 'not-allowed',
+  },
+  secondaryButton: {
+    marginTop: '8px',
+    padding: '9px 16px',
+    backgroundColor: '#fff',
+    color: '#111',
+    border: '1px solid #d1d5db',
     borderRadius: '4px',
     cursor: 'pointer',
     width: '100%',

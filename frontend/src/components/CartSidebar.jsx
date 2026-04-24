@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cartStore';
 
 const CartSidebar = () => {
   const navigate = useNavigate();

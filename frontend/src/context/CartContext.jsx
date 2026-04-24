@@ -1,7 +1,6 @@
-import { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { useReducer, useEffect, useState } from 'react';
 import { api } from '../api';
-
-const CartContext = createContext(null);
+import { CartContext } from './cartStore';
 
 function calcTotals(items) {
   return {
@@ -99,8 +98,4 @@ export function CartProvider({ children }) {
   }, [state.items, isLoaded]);
 
   return <CartContext.Provider value={{ state, dispatch }}>{children}</CartContext.Provider>;
-}
-
-export function useCart() {
-  return useContext(CartContext);
 }

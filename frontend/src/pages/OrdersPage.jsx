@@ -10,34 +10,50 @@ const STATUSES = ['Processing', 'In Transit', 'Delivered'];
 export default function OrdersPage() {
   const navigate = useNavigate();
   const [orders, setOrders]     = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [updating, setUpdating] = useState({});
   const [feedback, setFeedback] = useState({});
+  const [selectedStatuses, setSelectedStatuses] = useState({});
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
 
-    api.get('/api/orders/me')
-      .then(setOrders)
+    Promise.all([api.get('/api/orders/me'), api.get('/api/profile')])
+      .then(([ordersData, userData]) => {
+        setOrders(ordersData);
+        setCurrentUser(userData);
+        setSelectedStatuses(
+          Object.fromEntries(ordersData.map((order) => [order.id, order.status]))
+        );
+        localStorage.setItem('user', JSON.stringify(userData));
+      })
       .catch((err) => {
         if (err.message === 'No token provided' || err.message === 'Invalid token') {
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
           navigate('/login');
         } else {
-          setError('Could not load orders.');
+          setError('Could not load your orders. Please try again.');
         }
       })
       .finally(() => setLoading(false));
   }, [navigate]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
+    if (currentUser?.role !== 'product_manager') {
+      setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: 'You are not allowed to update order status.' } }));
+      return;
+    }
+
     setUpdating((u) => ({ ...u, [orderId]: true }));
     setFeedback((f) => ({ ...f, [orderId]: null }));
     try {
       const updated = await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)));
+      setSelectedStatuses((prev) => ({ ...prev, [orderId]: updated.status }));
       setFeedback((f) => ({ ...f, [orderId]: { type: 'ok', text: 'Status updated.' } }));
     } catch (err) {
       setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: err.message } }));
@@ -47,6 +63,8 @@ export default function OrdersPage() {
   };
 
   if (loading) return <div style={styles.center}>Loading orders…</div>;
+
+  const canUpdateStatus = currentUser?.role === 'product_manager';
 
   return (
     <div style={styles.container}>
@@ -96,36 +114,36 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            <div style={styles.updateRow}>
-              <select
-                defaultValue={order.status}
-                onChange={(e) => {
-                  const el = e.currentTarget;
-                  el.dataset.selected = e.target.value;
-                }}
-                id={`select-${order.id}`}
-                style={styles.select}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <button
-                style={styles.updateBtn}
-                disabled={updating[order.id]}
-                onClick={() => {
-                  const sel = document.getElementById(`select-${order.id}`);
-                  handleStatusUpdate(order.id, sel.value);
-                }}
-              >
-                {updating[order.id] ? 'Saving…' : 'Update Status'}
-              </button>
-              {feedback[order.id] && (
-                <span style={feedback[order.id].type === 'ok' ? styles.feedbackOk : styles.feedbackErr}>
-                  {feedback[order.id].text}
-                </span>
-              )}
-            </div>
+            {canUpdateStatus && (
+              <div style={styles.updateRow}>
+                <select
+                  value={selectedStatuses[order.id] || order.status}
+                  onChange={(e) => setSelectedStatuses((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                  style={styles.select}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <button
+                  style={styles.updateBtn}
+                  disabled={updating[order.id]}
+                  onClick={() => handleStatusUpdate(order.id, selectedStatuses[order.id] || order.status)}
+                >
+                  {updating[order.id] ? 'Saving…' : 'Update Status'}
+                </button>
+              </div>
+            )}
+
+            {canUpdateStatus && (
+              <div style={styles.feedbackRow}>
+                {feedback[order.id] && (
+                  <span style={feedback[order.id].type === 'ok' ? styles.feedbackOk : styles.feedbackErr}>
+                    {feedback[order.id].text}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -157,6 +175,7 @@ const styles = {
   itemPrice:   { fontWeight: 600, flexShrink: 0 },
   stepperCol:  { display: 'flex', alignItems: 'flex-start', paddingTop: 2 },
   updateRow:   { display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' },
+  feedbackRow: { marginTop: 8 },
   select:      { padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, cursor: 'pointer' },
   updateBtn:   { padding: '6px 14px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
   feedbackOk:  { fontSize: 12, color: '#16a34a' },

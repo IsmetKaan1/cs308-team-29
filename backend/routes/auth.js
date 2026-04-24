@@ -4,6 +4,17 @@ const User = require('../models/User');
 
 const router = express.Router();
 
+function toUserPayload(user) {
+  return {
+    id: user._id,
+    email: user.email,
+    username: user.username,
+    fullName: user.full_name,
+    gender: user.gender,
+    role: user.role,
+  };
+}
+
 router.post('/register', async (req, res) => {
   const { email, username, fullName, gender, password } = req.body;
 
@@ -18,8 +29,8 @@ router.post('/register', async (req, res) => {
     }
 
     const user = await User.create({ email, username, full_name: fullName, gender, password });
-    const token = jwt.sign({ id: user._id.toString(), email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, email: user.email, username: user.username, fullName: user.full_name, gender: user.gender } });
+    const token = jwt.sign({ id: user._id.toString(), email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: toUserPayload(user) });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -38,8 +49,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const token = jwt.sign({ id: user._id.toString(), email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, email: user.email, username: user.username, fullName: user.full_name, gender: user.gender } });
+    const token = jwt.sign({ id: user._id.toString(), email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: toUserPayload(user) });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
