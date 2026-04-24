@@ -7,17 +7,19 @@ import Spinner from '../components/Spinner';
 import { api } from '../api';
 
 const ALL = 'all';
+const VALID_SORTS = new Set(['', 'price-asc', 'price-desc', 'popularity']);
 
 const HomePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('category') || ALL;
+  const rawSort = searchParams.get('sort') || '';
+  const activeSort = VALID_SORTS.has(rawSort) ? rawSort : '';
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sortOption, setSortOption] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -51,6 +53,13 @@ const HomePage = () => {
     setSearchParams(next, { replace: true });
   };
 
+  const handleSortChange = (value) => {
+    const next = new URLSearchParams(searchParams);
+    if (!value) next.delete('sort');
+    else next.set('sort', value);
+    setSearchParams(next, { replace: true });
+  };
+
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     let list = products;
@@ -64,10 +73,21 @@ const HomePage = () => {
         p.description.toLowerCase().includes(q)
       );
     }
-    if (sortOption === 'price-asc') list = [...list].sort((a, b) => a.price - b.price);
-    else if (sortOption === 'price-desc') list = [...list].sort((a, b) => b.price - a.price);
+    if (activeSort === 'price-asc') {
+      list = [...list].sort((a, b) => a.price - b.price);
+    } else if (activeSort === 'price-desc') {
+      list = [...list].sort((a, b) => b.price - a.price);
+    } else if (activeSort === 'popularity') {
+      list = [...list].sort((a, b) => {
+        const salesDiff = (b.salesCount || 0) - (a.salesCount || 0);
+        if (salesDiff !== 0) return salesDiff;
+        const ratingDiff = (b.averageRating || 0) - (a.averageRating || 0);
+        if (ratingDiff !== 0) return ratingDiff;
+        return a.name.localeCompare(b.name, 'tr');
+      });
+    }
     return list;
-  }, [products, activeCategory, searchQuery, sortOption]);
+  }, [products, activeCategory, searchQuery, activeSort]);
 
   const heroSubtitle =
     activeCategory === ALL
@@ -130,10 +150,11 @@ const HomePage = () => {
               <select
                 id="sort"
                 className="sort-select"
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
+                value={activeSort}
+                onChange={(e) => handleSortChange(e.target.value)}
               >
                 <option value="">Varsayılan</option>
+                <option value="popularity">Popülerlik</option>
                 <option value="price-asc">Artan Fiyat</option>
                 <option value="price-desc">Azalan Fiyat</option>
               </select>
