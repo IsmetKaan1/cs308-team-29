@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cartStore';
 import { api } from '../api';
 
 export default function CheckoutPage() {
@@ -43,11 +43,30 @@ export default function CheckoutPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    const shippingAddress = {
+      fullName: fullName.trim(),
+      address: address.trim(),
+      city: city.trim(),
+      postalCode: postalCode.trim(),
+      country: country.trim(),
+    };
+
+    if (state.items.length === 0) {
+      setError('Sepetiniz boş.');
+      return;
+    }
+
+    if (Object.values(shippingAddress).some((value) => !value)) {
+      setError('Lütfen teslimat adresindeki tüm alanları doldurun.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const order = await api.post('/api/orders', {
         items: state.items,
-        shippingAddress: { fullName, address, city, postalCode, country },
+        shippingAddress,
       });
       dispatch({ type: 'CLEAR_CART' });
       navigate('/order-confirmation', { state: { order } });

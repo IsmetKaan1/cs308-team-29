@@ -4,11 +4,22 @@ const authenticate = require('../middleware/auth');
 
 const router = express.Router();
 
+function toUserPayload(user) {
+  return {
+    id: user._id,
+    email: user.email,
+    username: user.username,
+    fullName: user.full_name,
+    gender: user.gender,
+    role: user.role,
+  };
+}
+
 router.get('/', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ id: user._id, email: user.email, username: user.username, fullName: user.full_name, gender: user.gender });
+    res.json(toUserPayload(user));
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -28,7 +39,7 @@ router.put('/', authenticate, async (req, res) => {
       { username, full_name: fullName, gender },
       { new: true }
     );
-    res.json({ id: user._id, email: user.email, username: user.username, fullName: user.full_name, gender: user.gender });
+    res.json(toUserPayload(user));
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }

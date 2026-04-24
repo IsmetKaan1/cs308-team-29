@@ -1,4 +1,4 @@
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cartStore';
 
 const CartIcon = () => {
   const { state, dispatch } = useCart();

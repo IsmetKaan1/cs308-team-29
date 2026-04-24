@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import CartIcon from '../components/CartIcon';
 import ProfileIcon from '../components/ProfileIcon';
@@ -6,6 +7,7 @@ import CartSidebar from '../components/CartSidebar';
 import { api } from '../api';
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,33 +39,37 @@ const HomePage = () => {
     <div style={styles.container}>
       <div style={styles.topBar}>
         <h1 style={styles.header}>CS Dersleri</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button onClick={() => navigate('/orders')} style={{ background: 'none', border: '1px solid #4f46e5', color: '#4f46e5', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
+            Siparişlerim
+          </button>
           <CartIcon />
           <ProfileIcon />
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '20px' }}>
         <input
           type="text"
           placeholder="Ders ara (isim, kod veya içerik)..."
           className="form-input"
+          style={{ width: '80%' }}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
       <div style={styles.sortBar}>
-        <label htmlFor="sort" style={styles.sortLabel}>Sort by Price:</label>
+        <label htmlFor="sort" style={styles.sortLabel}>Fiyata Göre Sırala:</label>
         <select
           id="sort"
           value={sortOption}
           onChange={(e) => setSortOption(e.target.value)}
           style={styles.select}
         >
-          <option value="">Default</option>
-          <option value="price-asc">Low to High</option>
-          <option value="price-desc">High to Low</option>
+          <option value="">Varsayılan</option>
+          <option value="price-asc">Artan Fiyat</option>
+          <option value="price-desc">Azalan Fiyat</option>
         </select>
       </div>
 

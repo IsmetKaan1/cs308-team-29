@@ -1,28 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // useNavigate eklendi
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cartStore';
+import CartIcon from '../components/CartIcon';
+import ProfileIcon from '../components/ProfileIcon';
+import CartSidebar from '../components/CartSidebar';
 
 const ProductDetail = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
-  const navigate = useNavigate(); 
   const { dispatch } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false); 
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const fetchProductDetails = async () => {
+      setLoading(true);
+      setError('');
       try {
-        const data = await api.get(`/products/${id}`); 
-        if (!data) {
-          setError(true);
-        } else {
-          setProduct(data);
-        }
+        const data = await api.get(`/api/products/${id}`);
+        setProduct(data);
       } catch (error) {
-        console.error("Error fetching product data:", error);
-        setError(true); 
+        setError(error.message);
       } finally {
         setLoading(false);
       }
@@ -33,90 +34,92 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (product) {
-      dispatch({ 
-        type: 'ADD_ITEM', 
-        product: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: product.images?.[0] || 'placeholder.jpg'
-        } 
-      });
-      alert('Product added to cart!');
+      dispatch({ type: 'ADD_ITEM', product });
+      setMessage('Product added to cart.');
     }
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading product...</div>;
+    return <div style={styles.center}>Loading product...</div>;
   }
 
   if (error || !product) {
     return (
-      <div style={{ textAlign: 'center', marginTop: '100px', padding: '20px' }}>
-        <h2 style={{ fontSize: '2rem', color: '#dc3545' }}>404 - Product Not Found</h2>
-        <p style={{ fontSize: '1.2rem', marginBottom: '20px' }}>The product you are looking for does not exist or has been removed.</p>
-        <button 
-          onClick={() => navigate('/')} 
-          style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-        >
-          Return to Homepage
-        </button>
+      <div style={styles.container}>
+        <button onClick={() => navigate('/')} style={styles.back}>← Shop</button>
+        <div style={styles.emptyCard}>
+          <h2 style={{ fontSize: '2rem', color: '#dc3545' }}>404 - Product Not Found</h2>
+          <p>{error || 'The product you are looking for does not exist or has been removed.'}</p>
+          <button onClick={() => navigate('/')} style={styles.primaryButton}>Return to Homepage</button>
+        </div>
       </div>
     );
   }
 
+  const availableStock = product.quantityInStock ?? product.stock;
+  const isOutOfStock = availableStock != null && availableStock <= 0;
+
   return (
-    <div className="product-detail-container" style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      padding: '20px', 
-      maxWidth: '800px', 
-      margin: '0 auto', 
-      fontFamily: 'sans-serif'
-    }}>
-      <h1 style={{ textAlign: 'center' }}>{product.name}</h1>
-      
-      <img 
-        src={product.images?.[0] || 'placeholder.jpg'} 
-        alt={product.name} 
-        style={{ width: '100%', maxWidth: '400px', borderRadius: '8px', objectFit: 'cover' }} 
-      />
-      
-      <div className="product-info" style={{ width: '100%', marginTop: '30px', backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px' }}>
-        <p style={{ fontSize: '1.2rem' }}><strong>Price:</strong> ${product.price}</p>
-        <p><strong>Description:</strong> {product.description}</p>
-        <p><strong>Model / Serial No:</strong> {product.model} / {product.serialNumber}</p>
-        <p>
-          <strong>Stock Status:</strong> 
-          <span style={{ color: product.quantityInStocks > 0 ? 'green' : 'red', fontWeight: 'bold' }}>
-            {product.quantityInStocks > 0 ? ` In Stock (${product.quantityInStocks} available)` : ' Out of Stock'}
-          </span>
-        </p>
-        <p><strong>Warranty Info:</strong> {product.warrantyStatus}</p>
-        <p><strong>Distributor:</strong> {product.distributorInfo}</p>
+    <div style={styles.container}>
+      <div style={styles.topBar}>
+        <button onClick={() => navigate('/')} style={styles.back}>← Shop</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <CartIcon />
+          <ProfileIcon />
+        </div>
       </div>
 
-      <button 
-        onClick={handleAddToCart}
-        disabled={product.quantityInStocks === 0}
-        style={{
-          width: '100%',
-          maxWidth: '400px',
-          padding: '15px',
-          backgroundColor: product.quantityInStocks > 0 ? '#28a745' : '#6c757d',
-          color: 'white',
-          fontSize: '1.1rem',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: product.quantityInStocks > 0 ? 'pointer' : 'not-allowed',
-          marginTop: '20px'
-        }}
-      >
-        {product.quantityInStocks > 0 ? 'Add to Cart' : 'Out of Stock'}
-      </button>
+      <div style={styles.detailCard}>
+        <div style={styles.codeBadge}>{product.code}</div>
+        <h1 style={styles.title}>{product.name}</h1>
+        <p style={styles.description}>{product.description}</p>
+
+        <div style={styles.infoGrid}>
+          <div>
+            <span style={styles.label}>Price</span>
+            <strong style={styles.price}>{product.price.toFixed(2)} ₺</strong>
+          </div>
+          <div>
+            <span style={styles.label}>Stock</span>
+            <strong style={isOutOfStock ? styles.outOfStock : styles.inStock}>
+              {availableStock == null ? 'Available' : `${availableStock} available`}
+            </strong>
+          </div>
+        </div>
+
+        {message && <div className="success-message">{message}</div>}
+
+        <button
+          onClick={handleAddToCart}
+          disabled={isOutOfStock}
+          style={{ ...styles.primaryButton, ...(isOutOfStock ? styles.disabledButton : {}) }}
+        >
+          {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+        </button>
+      </div>
+
+      <CartSidebar />
     </div>
   );
+};
+
+const styles = {
+  container: { padding: '20px', maxWidth: '900px', margin: '0 auto' },
+  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  back: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#fff', padding: 0 },
+  center: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: '#fff' },
+  detailCard: { background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', padding: 24 },
+  emptyCard: { background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', padding: 24, textAlign: 'center' },
+  codeBadge: { display: 'inline-block', backgroundColor: '#1e3c72', color: '#fff', fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 4, marginBottom: 12 },
+  title: { margin: '0 0 12px 0', fontSize: 28, color: '#111827' },
+  description: { color: '#4b5563', lineHeight: 1.5, marginBottom: 24 },
+  infoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 24 },
+  label: { display: 'block', color: '#6b7280', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 },
+  price: { color: '#111827', fontSize: 22 },
+  inStock: { color: '#16a34a', fontSize: 16 },
+  outOfStock: { color: '#dc2626', fontSize: 16 },
+  primaryButton: { padding: '10px 18px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 700 },
+  disabledButton: { backgroundColor: '#9ca3af', cursor: 'not-allowed' },
 };
 
 export default ProductDetail;
