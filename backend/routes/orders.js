@@ -185,4 +185,30 @@ router.get('/:id/invoice', authenticate, async (req, res) => {
   }
 });
 
+router.post('/:id/invoice/resend', authenticate, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.userId !== req.user.id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to resend this invoice' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user || !user.email) {
+      return res.status(400).json({ error: 'No email address on file for this account.' });
+    }
+
+    const pdfBuffer = await generateInvoicePdf(order);
+    await sendInvoiceEmail(user.email, order, pdfBuffer);
+
+    res.json({ message: 'Invoice sent.', email: user.email });
+  } catch (err) {
+    console.error('Error resending invoice for order', req.params.id, ':', err);
+    res.status(500).json({ error: 'Could not resend the invoice. Please try again later.' });
+  }
+});
+
 module.exports = router;

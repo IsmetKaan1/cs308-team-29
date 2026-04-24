@@ -38,9 +38,37 @@ async function request(path, options = {}) {
   return data;
 }
 
+async function requestBlob(path, { accept } = {}) {
+  const headers = {};
+  if (accept) headers['Accept'] = accept;
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { headers });
+  } catch {
+    throw new Error('Could not reach the server. Please try again.');
+  }
+
+  if (!res.ok) {
+    let message = `Request failed (${res.status}). Please try again.`;
+    try {
+      const text = await res.text();
+      if (text) {
+        try { message = JSON.parse(text).error || message; } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+    throw new Error(message);
+  }
+
+  return res.blob();
+}
+
 export const api = {
-  post:  (path, body) => request(path, { method: 'POST',  body: JSON.stringify(body) }),
-  get:   (path)       => request(path),
-  put:   (path, body) => request(path, { method: 'PUT',   body: JSON.stringify(body) }),
-  patch: (path, body) => request(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  post:    (path, body) => request(path, { method: 'POST',  body: JSON.stringify(body) }),
+  get:     (path)       => request(path),
+  put:     (path, body) => request(path, { method: 'PUT',   body: JSON.stringify(body) }),
+  patch:   (path, body) => request(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  getBlob: (path, opts) => requestBlob(path, opts),
 };
