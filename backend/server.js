@@ -13,6 +13,7 @@ const productRoutes = require('./routes/products');
 const usbRoutes = require('./routes/usb');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
+const paymentRoutes = require('./routes/payments');
 const seedRoutes = require('./routes/seed');
 const connectMongoDB = require('./mongoDb');
 
@@ -30,6 +31,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/usb', usbRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/seed', seedRoutes);
 
 app.use((req, res) => {

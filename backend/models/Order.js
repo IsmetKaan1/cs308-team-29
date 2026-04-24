@@ -26,6 +26,14 @@ const orderSchema = new mongoose.Schema({
     enum: ['Processing', 'In Transit', 'Delivered'],
     default: 'Processing',
   },
+  paymentTransactionId: { type: String, required: true },
+  paymentStatus: {
+    type: String,
+    enum: ['approved', 'declined'],
+    default: 'approved',
+  },
+  paymentCardLast4: { type: String, default: '' },
+  paidAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now },
 });
 
