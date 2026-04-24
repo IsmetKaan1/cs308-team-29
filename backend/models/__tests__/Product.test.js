@@ -9,6 +9,9 @@ function baseProductData(overrides = {}) {
     category: 'Programming',
     serialNumber: 'SN-TEST-0001',
     quantityInStock: 10,
+    model: 'TEST-2025',
+    warrantyMonths: 12,
+    distributorInfo: 'Test Distributor',
     ...overrides,
   };
 }
@@ -61,11 +64,34 @@ describe('Product schema', () => {
     expect(p.validateSync().errors.warrantyMonths).toBeDefined();
   });
 
-  test('applies defaults for warrantyMonths, distributorInfo, model', () => {
-    const p = new Product(baseProductData());
-    expect(p.warrantyMonths).toBe(0);
-    expect(p.distributorInfo).toBe('');
-    expect(p.model).toBe('');
+  test('rejects missing model', () => {
+    const p = new Product(baseProductData({ model: undefined }));
+    expect(p.validateSync().errors.model).toBeDefined();
+  });
+
+  test('rejects empty-string model', () => {
+    const p = new Product(baseProductData({ model: '   ' }));
+    expect(p.validateSync().errors.model).toBeDefined();
+  });
+
+  test('rejects missing warrantyMonths', () => {
+    const p = new Product(baseProductData({ warrantyMonths: undefined }));
+    expect(p.validateSync().errors.warrantyMonths).toBeDefined();
+  });
+
+  test('accepts zero as a valid warrantyMonths (no warranty)', () => {
+    const p = new Product(baseProductData({ warrantyMonths: 0 }));
+    expect(p.validateSync()).toBeUndefined();
+  });
+
+  test('rejects missing distributorInfo', () => {
+    const p = new Product(baseProductData({ distributorInfo: undefined }));
+    expect(p.validateSync().errors.distributorInfo).toBeDefined();
+  });
+
+  test('rejects empty-string distributorInfo', () => {
+    const p = new Product(baseProductData({ distributorInfo: '   ' }));
+    expect(p.validateSync().errors.distributorInfo).toBeDefined();
   });
 
   test('toJSON renames _id to id and strips __v', () => {

@@ -127,6 +127,9 @@ router.post('/', async (req, res) => {
   if (serialNumber === undefined || serialNumber === null || serialNumber === '') missing.push('serialNumber');
   if (quantityInStock === undefined || quantityInStock === null) missing.push('quantityInStock');
   if (category === undefined || category === null || category === '') missing.push('category');
+  if (model === undefined || model === null || String(model).trim() === '') missing.push('model');
+  if (distributorInfo === undefined || distributorInfo === null || String(distributorInfo).trim() === '') missing.push('distributorInfo');
+  if (warrantyMonths === undefined || warrantyMonths === null || Number.isNaN(Number(warrantyMonths))) missing.push('warrantyMonths');
   if (missing.length) {
     return res.status(400).json({ error: `Missing required field(s): ${missing.join(', ')}` });
   }

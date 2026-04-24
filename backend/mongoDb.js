@@ -42,6 +42,25 @@ const connectDB = async () => {
         return Product.updateOne({ _id: doc._id }, { $set: { category } });
       }));
     }
+
+    // Backfill: docs created before model/warrantyMonths/distributorInfo became required.
+    const legacyMeta = await Product.find({
+      $or: [
+        { model: { $in: [null, ''] } },
+        { distributorInfo: { $in: [null, ''] } },
+        { warrantyMonths: { $in: [null, undefined] } },
+      ],
+    }).lean();
+    if (legacyMeta.length) {
+      console.log(`Backfilling model/warranty/distributor on ${legacyMeta.length} legacy product(s)...`);
+      await Promise.all(legacyMeta.map((doc) => {
+        const patch = {};
+        if (!doc.model) patch.model = `${(doc.code || 'PRODUCT').replace(/\s+/g, '')}-2025`;
+        if (!doc.distributorInfo) patch.distributorInfo = 'SU Campus Store, Istanbul';
+        if (doc.warrantyMonths == null) patch.warrantyMonths = 12;
+        return Product.updateOne({ _id: doc._id }, { $set: patch });
+      }));
+    }
   } catch (error) {
     console.error('MongoDB connection failed — check MONGODB_URI. Details:', error.message);
     process.exit(1);

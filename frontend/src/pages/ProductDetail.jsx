@@ -77,9 +77,39 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {message && <div className="success-message">{message}</div>}
+        <h2 style={{ fontSize: 'var(--fs-18)', marginTop: 'var(--space-6)', marginBottom: 'var(--space-3)' }}>
+          Ürün Bilgileri
+        </h2>
+        <div className="detail-info-grid">
+          {product.model && (
+            <div>
+              <span className="detail-info-label">Model</span>
+              <strong className="detail-info-value" style={{ fontSize: 'var(--fs-15)' }}>{product.model}</strong>
+            </div>
+          )}
+          {product.serialNumber && (
+            <div>
+              <span className="detail-info-label">Seri No</span>
+              <strong className="detail-info-value" style={{ fontSize: 'var(--fs-15)' }}>{product.serialNumber}</strong>
+            </div>
+          )}
+          <div>
+            <span className="detail-info-label">Garanti</span>
+            <strong className="detail-info-value" style={{ fontSize: 'var(--fs-15)' }}>
+              {product.warrantyMonths > 0 ? `${product.warrantyMonths} ay` : 'Garantisiz'}
+            </strong>
+          </div>
+          {product.distributorInfo && (
+            <div>
+              <span className="detail-info-label">Distribütör</span>
+              <strong className="detail-info-value" style={{ fontSize: 'var(--fs-15)' }}>{product.distributorInfo}</strong>
+            </div>
+          )}
+        </div>
 
-        <div className="detail-actions">
+        {message && <div className="success-message" style={{ marginTop: 'var(--space-4)' }}>{message}</div>}
+
+        <div className="detail-actions" style={{ marginTop: 'var(--space-5)' }}>
           <button
             type="button"
             className="btn btn-primary btn-lg"
