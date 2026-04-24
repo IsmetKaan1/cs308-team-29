@@ -31,22 +31,19 @@ export default function LoginPage() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <button 
-          className="btn-secondary" 
-          onClick={() => navigate('/')} 
-          style={{ marginBottom: '20px', padding: '8px 12px', width: 'auto', alignSelf: 'flex-start', display: 'flex', gap: '6px' }}
-        >
-          &larr; Back to Home
+        <button type="button" className="auth-back" onClick={() => navigate('/')}>
+          ← Ana sayfa
         </button>
-        <h2>Welcome Back</h2>
-        <p className="subtitle">Sign in to your account</p>
+        <h2>Tekrar hoşgeldin</h2>
+        <p className="subtitle">Hesabına giriş yap</p>
 
         {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
-            <label>Email Address</label>
+            <label htmlFor="email">E-posta</label>
             <input
+              id="email"
               type="email"
               className="form-input"
               value={email}
@@ -54,49 +51,41 @@ export default function LoginPage() {
               placeholder="name@example.com"
               required
               autoFocus
+              autoComplete="email"
             />
           </div>
 
           <div className="form-group">
-            <label>Password</label>
-            <div style={{ position: 'relative' }}>
+            <label htmlFor="password">Şifre</label>
+            <div className="input-with-addon">
               <input
+                id="password"
                 type={showPassword ? 'text' : 'password'}
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Şifreni gir"
                 required
-                style={{ paddingRight: '48px' }}
+                autoComplete="current-password"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: '#888',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                }}
+                className="input-addon-btn"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
               >
-                {showPassword ? 'Hide' : 'Show'}
+                {showPassword ? 'Gizle' : 'Göster'}
               </button>
             </div>
           </div>
 
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+          <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={loading}>
+            {loading ? <><span className="spinner spinner--sm spinner--light" /> Giriş yapılıyor...</> : 'Giriş Yap'}
           </button>
         </form>
 
         <p className="link-text">
-          Don't have an account? <Link to="/register">Create one</Link>
+          Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
         </p>
       </div>
     </div>

@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import CartIcon from '../components/CartIcon';
-import ProfileIcon from '../components/ProfileIcon';
 import CartSidebar from '../components/CartSidebar';
+import AppHeader from '../components/AppHeader';
+import Spinner from '../components/Spinner';
 import { api } from '../api';
 
 const HomePage = () => {
-  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -21,103 +19,86 @@ const HomePage = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter((product) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(q) ||
+      product.code.toLowerCase().includes(q) ||
+      product.description.toLowerCase().includes(q)
+    );
+  });
 
   const sortedProducts = [...filteredProducts];
-
-  if (sortOption === 'price-asc') {
-    sortedProducts.sort((a, b) => a.price - b.price);
-  } else if (sortOption === 'price-desc') {
-    sortedProducts.sort((a, b) => b.price - a.price);
-  }
+  if (sortOption === 'price-asc') sortedProducts.sort((a, b) => a.price - b.price);
+  else if (sortOption === 'price-desc') sortedProducts.sort((a, b) => b.price - a.price);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.topBar}>
-        <h1 style={styles.header}>CS Dersleri</h1>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button onClick={() => navigate('/orders')} style={{ background: 'none', border: '1px solid #4f46e5', color: '#4f46e5', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
-            Siparişlerim
-          </button>
-          <CartIcon />
-          <ProfileIcon />
+    <div className="page">
+      <AppHeader />
+
+      <main className="page-body">
+        <div className="container">
+          <div className="page-hero">
+            <h1>CS Dersleri</h1>
+            <p>İhtiyacın olan dersi bul ve sepete ekle.</p>
+          </div>
+
+          <div className="product-toolbar">
+            <div className="product-toolbar-search">
+              <input
+                type="search"
+                className="search-input"
+                placeholder="Ders ara (isim, kod veya içerik)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Ders ara"
+              />
+            </div>
+
+            <div className="sort-group">
+              <label htmlFor="sort">Sırala:</label>
+              <select
+                id="sort"
+                className="sort-select"
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+              >
+                <option value="">Varsayılan</option>
+                <option value="price-asc">Artan Fiyat</option>
+                <option value="price-desc">Azalan Fiyat</option>
+              </select>
+            </div>
+          </div>
+
+          {loading && <Spinner label="Dersler yükleniyor..." />}
+
+          {error && !loading && (
+            <div className="empty-block" role="alert">
+              <h3>Bir sorun oluştu</h3>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && sortedProducts.length === 0 && (
+            <div className="empty-block">
+              <h3>Sonuç bulunamadı</h3>
+              <p>Arama kriterlerine uygun ders bulunamadı.</p>
+            </div>
+          )}
+
+          {!loading && !error && sortedProducts.length > 0 && (
+            <div className="product-grid">
+              {sortedProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
-      </div>
-
-        <div style={{ marginBottom: '20px' }}>
-        <input
-          type="text"
-          placeholder="Ders ara (isim, kod veya içerik)..."
-          className="form-input"
-          style={{ width: '80%' }}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      <div style={styles.sortBar}>
-        <label htmlFor="sort" style={styles.sortLabel}>Fiyata Göre Sırala:</label>
-        <select
-          id="sort"
-          value={sortOption}
-          onChange={(e) => setSortOption(e.target.value)}
-          style={styles.select}
-        >
-          <option value="">Varsayılan</option>
-          <option value="price-asc">Artan Fiyat</option>
-          <option value="price-desc">Azalan Fiyat</option>
-        </select>
-      </div>
-
-      {loading && <p style={styles.status}>Yükleniyor...</p>}
-      {error && <p style={{ ...styles.status, color: '#fca5a5' }}>{error}</p>}
-
-      <div style={styles.grid}>
-        {sortedProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      </main>
 
       <CartSidebar />
     </div>
   );
-};
-
-const styles = {
-  container: { padding: '20px', maxWidth: '1200px', margin: '0 auto' },
-  topBar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px',
-  },
-  header: { color: 'white', margin: 0 },
-  sortBar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    marginBottom: '20px',
-  },
-  sortLabel: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  select: {
-    padding: '8px 12px',
-    borderRadius: '8px',
-    border: '1px solid #ccc',
-    outline: 'none',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-    gap: '24px',
-  },
-  status: { textAlign: 'center', color: 'white', marginBottom: '20px' },
 };
 
 export default HomePage;

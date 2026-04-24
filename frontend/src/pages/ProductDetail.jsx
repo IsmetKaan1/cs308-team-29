@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useCart } from '../context/cartStore';
-import CartIcon from '../components/CartIcon';
-import ProfileIcon from '../components/ProfileIcon';
+import AppHeader from '../components/AppHeader';
 import CartSidebar from '../components/CartSidebar';
+import Spinner from '../components/Spinner';
 
 const ProductDetail = () => {
   const navigate = useNavigate();
@@ -16,110 +16,88 @@ const ProductDetail = () => {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const fetchProductDetails = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await api.get(`/api/products/${id}`);
-        setProduct(data);
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProductDetails();
+    let active = true;
+    setLoading(true);
+    setError('');
+    api.get(`/api/products/${id}`)
+      .then((data) => { if (active) setProduct(data); })
+      .catch((err) => { if (active) setError(err.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [id]);
 
   const handleAddToCart = () => {
-    if (product) {
-      dispatch({ type: 'ADD_ITEM', product });
-      setMessage('Product added to cart.');
-    }
+    if (!product) return;
+    dispatch({ type: 'ADD_ITEM', product });
+    setMessage('Ürün sepete eklendi.');
+    setTimeout(() => setMessage(''), 2500);
   };
 
-  if (loading) {
-    return <div style={styles.center}>Loading product...</div>;
-  }
+  const renderBody = () => {
+    if (loading) return <Spinner label="Ürün yükleniyor..." />;
 
-  if (error || !product) {
+    if (error || !product) {
+      return (
+        <div className="empty-state">
+          <h2>Ürün bulunamadı</h2>
+          <p>{error || 'Aradığınız ürün mevcut değil veya kaldırılmış olabilir.'}</p>
+          <button className="btn btn-primary" onClick={() => navigate('/')}>Ana sayfaya dön</button>
+        </div>
+      );
+    }
+
+    const availableStock = product.quantityInStock ?? product.stock;
+    const isOutOfStock = availableStock != null && availableStock <= 0;
+
     return (
-      <div style={styles.container}>
-        <button onClick={() => navigate('/')} style={styles.back}>← Shop</button>
-        <div style={styles.emptyCard}>
-          <h2 style={{ fontSize: '2rem', color: '#dc3545' }}>404 - Product Not Found</h2>
-          <p>{error || 'The product you are looking for does not exist or has been removed.'}</p>
-          <button onClick={() => navigate('/')} style={styles.primaryButton}>Return to Homepage</button>
-        </div>
-      </div>
-    );
-  }
+      <div className="detail-card">
+        <span className="product-card-badge">{product.code}</span>
+        <h1 className="detail-title">{product.name}</h1>
+        <p className="detail-desc">{product.description}</p>
 
-  const availableStock = product.quantityInStock ?? product.stock;
-  const isOutOfStock = availableStock != null && availableStock <= 0;
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.topBar}>
-        <button onClick={() => navigate('/')} style={styles.back}>← Shop</button>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <CartIcon />
-          <ProfileIcon />
-        </div>
-      </div>
-
-      <div style={styles.detailCard}>
-        <div style={styles.codeBadge}>{product.code}</div>
-        <h1 style={styles.title}>{product.name}</h1>
-        <p style={styles.description}>{product.description}</p>
-
-        <div style={styles.infoGrid}>
+        <div className="detail-info-grid">
           <div>
-            <span style={styles.label}>Price</span>
-            <strong style={styles.price}>{product.price.toFixed(2)} ₺</strong>
+            <span className="detail-info-label">Fiyat</span>
+            <strong className="detail-info-value">{product.price.toFixed(2)} ₺</strong>
           </div>
           <div>
-            <span style={styles.label}>Stock</span>
-            <strong style={isOutOfStock ? styles.outOfStock : styles.inStock}>
-              {availableStock == null ? 'Available' : `${availableStock} available`}
+            <span className="detail-info-label">Stok</span>
+            <strong className={`detail-info-value ${isOutOfStock ? 'detail-info-value--stock-out' : 'detail-info-value--stock-in'}`}>
+              {availableStock == null ? 'Mevcut' : isOutOfStock ? 'Stokta yok' : `${availableStock} adet`}
             </strong>
           </div>
         </div>
 
         {message && <div className="success-message">{message}</div>}
 
-        <button
-          onClick={handleAddToCart}
-          disabled={isOutOfStock}
-          style={{ ...styles.primaryButton, ...(isOutOfStock ? styles.disabledButton : {}) }}
-        >
-          {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
-        </button>
+        <div className="detail-actions">
+          <button
+            type="button"
+            className="btn btn-primary btn-lg"
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+          >
+            {isOutOfStock ? 'Stokta Yok' : 'Sepete Ekle'}
+          </button>
+          <button type="button" className="btn btn-secondary btn-lg" onClick={() => navigate('/')}>
+            ← Alışverişe Dön
+          </button>
+        </div>
       </div>
+    );
+  };
 
+  return (
+    <div className="page">
+      <AppHeader />
+      <main className="page-body">
+        <div className="container-md">
+          {renderBody()}
+        </div>
+      </main>
       <CartSidebar />
     </div>
   );
-};
-
-const styles = {
-  container: { padding: '20px', maxWidth: '900px', margin: '0 auto' },
-  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  back: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#fff', padding: 0 },
-  center: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: '#fff' },
-  detailCard: { background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', padding: 24 },
-  emptyCard: { background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', padding: 24, textAlign: 'center' },
-  codeBadge: { display: 'inline-block', backgroundColor: '#1e3c72', color: '#fff', fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 4, marginBottom: 12 },
-  title: { margin: '0 0 12px 0', fontSize: 28, color: '#111827' },
-  description: { color: '#4b5563', lineHeight: 1.5, marginBottom: 24 },
-  infoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 24 },
-  label: { display: 'block', color: '#6b7280', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 },
-  price: { color: '#111827', fontSize: 22 },
-  inStock: { color: '#16a34a', fontSize: 16 },
-  outOfStock: { color: '#dc2626', fontSize: 16 },
-  primaryButton: { padding: '10px 18px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 700 },
-  disabledButton: { backgroundColor: '#9ca3af', cursor: 'not-allowed' },
 };
 
 export default ProductDetail;

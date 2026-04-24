@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import AppHeader from '../components/AppHeader';
+import Spinner from '../components/Spinner';
 
 export default function ProfileSettingsPage() {
   const navigate = useNavigate();
@@ -46,12 +48,11 @@ export default function ProfileSettingsPage() {
     setError('');
     setMessage('');
     setSaving(true);
-
     try {
       const data = await api.put('/api/profile', { username, fullName, gender });
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data));
-      setMessage('Profile updated successfully!');
+      setMessage('Profil başarıyla güncellendi.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -64,19 +65,13 @@ export default function ProfileSettingsPage() {
     setPwError('');
     setPwMessage('');
 
-    if (newPassword !== confirmNewPassword) {
-      setPwError('New passwords do not match!');
-      return;
-    }
-    if (newPassword.length < 8) {
-      setPwError('New password must be at least 8 characters.');
-      return;
-    }
+    if (newPassword !== confirmNewPassword) { setPwError('Yeni şifreler eşleşmiyor.'); return; }
+    if (newPassword.length < 8) { setPwError('Yeni şifre en az 8 karakter olmalı.'); return; }
 
     setPwSaving(true);
     try {
       await api.put('/api/profile/password', { currentPassword, newPassword });
-      setPwMessage('Password changed successfully!');
+      setPwMessage('Şifre başarıyla değiştirildi.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
@@ -96,10 +91,11 @@ export default function ProfileSettingsPage() {
 
   if (!user) {
     return (
-      <div className="auth-container">
-        <div className="auth-card" style={{ textAlign: 'center' }}>
-          <p>Loading...</p>
-        </div>
+      <div className="page">
+        <AppHeader showNav={false} />
+        <main className="page-body">
+          <Spinner label="Yükleniyor..." />
+        </main>
       </div>
     );
   }
@@ -112,125 +108,140 @@ export default function ProfileSettingsPage() {
     .slice(0, 2);
 
   return (
-    <div className="settings-container">
-      <div className="settings-header">
-        <h1>Account Settings</h1>
-        <button className="btn-logout" onClick={handleLogout}>
-          Sign Out
-        </button>
-      </div>
-
-      <div className="settings-card">
-        <div className="profile-avatar">
-          <div className="avatar-circle">{initials}</div>
-          <div className="avatar-info">
-            <span className="name">{user.fullName}</span>
-            <span className="email">{user.email}</span>
+    <div className="page">
+      <AppHeader />
+      <main className="page-body">
+        <div className="settings-header">
+          <div>
+            <h1>Hesap Ayarları</h1>
+            <p style={{ color: 'var(--color-ink-500)', fontSize: 'var(--fs-14)', marginTop: 4 }}>
+              Profilini yönet ve şifreni güncelle.
+            </p>
           </div>
+          <button className="btn btn-danger" onClick={handleLogout}>Çıkış Yap</button>
         </div>
 
-        <hr className="section-divider" />
+        <div className="settings-card">
+          <div className="profile-avatar">
+            <div className="avatar-circle">{initials}</div>
+            <div className="avatar-info">
+              <span className="name">{user.fullName}</span>
+              <span className="email">{user.email}</span>
+            </div>
+          </div>
 
-        <h2>Profile Information</h2>
+          <hr className="section-divider" />
 
-        {message && <div className="success-message">{message}</div>}
-        {error && <div className="error-message">{error}</div>}
+          <h2>Profil Bilgileri</h2>
 
-        <form onSubmit={handleProfileUpdate}>
-          <div className="form-row">
+          {message && <div className="success-message">{message}</div>}
+          {error && <div className="error-message">{error}</div>}
+
+          <form onSubmit={handleProfileUpdate} noValidate>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="ps-username">Kullanıcı Adı</label>
+                <input
+                  id="ps-username"
+                  type="text"
+                  className="form-input"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="ps-gender">Cinsiyet</label>
+                <select
+                  id="ps-gender"
+                  className="form-select"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  required
+                >
+                  <option value="Male">Erkek</option>
+                  <option value="Female">Kadın</option>
+                  <option value="Other">Diğer</option>
+                  <option value="Prefer not to say">Belirtmek istemiyorum</option>
+                </select>
+              </div>
+            </div>
+
             <div className="form-group">
-              <label>Username</label>
+              <label htmlFor="ps-fullname">Ad Soyad</label>
               <input
+                id="ps-fullname"
                 type="text"
                 className="form-input"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 required
               />
             </div>
+
             <div className="form-group">
-              <label>Gender</label>
-              <select
-                className="form-select"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                required
-              >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                <option value="Prefer not to say">Prefer not to say</option>
-              </select>
+              <label htmlFor="ps-email">E-posta</label>
+              <input id="ps-email" type="email" className="form-input" value={user.email} disabled />
             </div>
-          </div>
 
-          <div className="form-group">
-            <label>Full Name</label>
-            <input
-              type="text"
-              className="form-input"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
+            <button type="submit" className="btn btn-primary btn-lg" disabled={saving}>
+              {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+            </button>
+          </form>
 
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" className="form-input" value={user.email} disabled style={{ opacity: 0.6 }} />
-          </div>
+          <hr className="section-divider" />
 
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </form>
+          <h2>Şifre Değiştir</h2>
 
-        <hr className="section-divider" />
+          {pwMessage && <div className="success-message">{pwMessage}</div>}
+          {pwError && <div className="error-message">{pwError}</div>}
 
-        <h2>Change Password</h2>
-
-        {pwMessage && <div className="success-message">{pwMessage}</div>}
-        {pwError && <div className="error-message">{pwError}</div>}
-
-        <form onSubmit={handlePasswordChange}>
-          <div className="form-group">
-            <label>Current Password</label>
-            <input
-              type="password"
-              className="form-input"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-row">
+          <form onSubmit={handlePasswordChange} noValidate>
             <div className="form-group">
-              <label>New Password</label>
+              <label htmlFor="ps-current-pw">Mevcut Şifre</label>
               <input
+                id="ps-current-pw"
                 type="password"
                 className="form-input"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 required
+                autoComplete="current-password"
               />
             </div>
-            <div className="form-group">
-              <label>Confirm New Password</label>
-              <input
-                type="password"
-                className="form-input"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                required
-              />
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="ps-new-pw">Yeni Şifre</label>
+                <input
+                  id="ps-new-pw"
+                  type="password"
+                  className="form-input"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="ps-confirm-pw">Yeni Şifre (Tekrar)</label>
+                <input
+                  id="ps-confirm-pw"
+                  type="password"
+                  className="form-input"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
             </div>
-          </div>
 
-          <button type="submit" className="btn-primary" disabled={pwSaving}>
-            {pwSaving ? 'Updating...' : 'Update Password'}
-          </button>
-        </form>
-      </div>
+            <button type="submit" className="btn btn-primary btn-lg" disabled={pwSaving}>
+              {pwSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+            </button>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }
