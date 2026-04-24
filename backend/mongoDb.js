@@ -24,7 +24,8 @@ const connectDB = async () => {
       console.log('Products seeded successfully.');
     }
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('MongoDB connection failed — check MONGODB_URI. Details:', error.message);
+    process.exit(1);
   }
 };
 
