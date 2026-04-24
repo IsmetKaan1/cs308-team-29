@@ -2,11 +2,25 @@ const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
 
+const PRODUCT_CATEGORIES = [
+  'Programming',
+  'Algorithms',
+  'Systems',
+  'Software Engineering',
+  'AI & Data Science',
+];
+
 const productSchema = new Schema({
   code: { type: String, required: true },
   name: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
+  category: {
+    type: String,
+    required: true,
+    enum: PRODUCT_CATEGORIES,
+    index: true,
+  },
   stock: { type: Number, default: null },
   serialNumber: { type: String, required: true, unique: true },
   warrantyMonths: { type: Number, default: 0, min: 0 },
@@ -24,4 +38,8 @@ productSchema.set('toJSON', {
   }
 });
 
-module.exports = mongoose.model('Product', productSchema);
+const Product = mongoose.model('Product', productSchema);
+Product.CATEGORIES = PRODUCT_CATEGORIES;
+
+module.exports = Product;
+module.exports.CATEGORIES = PRODUCT_CATEGORIES;

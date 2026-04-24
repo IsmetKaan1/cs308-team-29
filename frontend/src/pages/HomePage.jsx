@@ -1,36 +1,78 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import CartSidebar from '../components/CartSidebar';
 import AppHeader from '../components/AppHeader';
 import Spinner from '../components/Spinner';
 import { api } from '../api';
 
+const ALL = 'all';
+
 const HomePage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeCategory = searchParams.get('category') || ALL;
+
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sortOption, setSortOption] = useState('');
 
   useEffect(() => {
-    api.get('/api/products')
-      .then((data) => setProducts(data))
-      .catch(() => setError('Dersler yüklenemedi.'))
-      .finally(() => setLoading(false));
+    let active = true;
+    Promise.all([
+      api.get('/api/products'),
+      api.get('/api/products/categories').catch(() => []),
+    ])
+      .then(([productsData, categoriesData]) => {
+        if (!active) return;
+        setProducts(productsData);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      })
+      .catch(() => { if (active) setError('Dersler yüklenemedi.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const filteredProducts = products.filter((product) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(q) ||
-      product.code.toLowerCase().includes(q) ||
-      product.description.toLowerCase().includes(q)
-    );
-  });
+  const counts = useMemo(() => {
+    const map = { [ALL]: products.length };
+    for (const c of categories) map[c] = 0;
+    for (const p of products) {
+      if (p.category in map) map[p.category] += 1;
+    }
+    return map;
+  }, [products, categories]);
 
-  const sortedProducts = [...filteredProducts];
-  if (sortOption === 'price-asc') sortedProducts.sort((a, b) => a.price - b.price);
-  else if (sortOption === 'price-desc') sortedProducts.sort((a, b) => b.price - a.price);
+  const handleCategoryChange = (category) => {
+    const next = new URLSearchParams(searchParams);
+    if (category === ALL) next.delete('category');
+    else next.set('category', category);
+    setSearchParams(next, { replace: true });
+  };
+
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let list = products;
+    if (activeCategory !== ALL) {
+      list = list.filter((p) => p.category === activeCategory);
+    }
+    if (q) {
+      list = list.filter((p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.code.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
+      );
+    }
+    if (sortOption === 'price-asc') list = [...list].sort((a, b) => a.price - b.price);
+    else if (sortOption === 'price-desc') list = [...list].sort((a, b) => b.price - a.price);
+    return list;
+  }, [products, activeCategory, searchQuery, sortOption]);
+
+  const heroSubtitle =
+    activeCategory === ALL
+      ? 'İhtiyacın olan dersi bul ve sepete ekle.'
+      : `${activeCategory} kategorisindeki dersler.`;
 
   return (
     <div className="page">
@@ -40,8 +82,36 @@ const HomePage = () => {
         <div className="container">
           <div className="page-hero">
             <h1>CS Dersleri</h1>
-            <p>İhtiyacın olan dersi bul ve sepete ekle.</p>
+            <p>{heroSubtitle}</p>
           </div>
+
+          {categories.length > 0 && (
+            <div className="category-tabs" role="tablist" aria-label="Kategoriler">
+              <button
+                type="button"
+                role="tab"
+                className="category-tab"
+                aria-pressed={activeCategory === ALL}
+                onClick={() => handleCategoryChange(ALL)}
+              >
+                Tümü
+                <span className="category-tab-count">{counts[ALL] ?? 0}</span>
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  role="tab"
+                  className="category-tab"
+                  aria-pressed={activeCategory === c}
+                  onClick={() => handleCategoryChange(c)}
+                >
+                  {c}
+                  <span className="category-tab-count">{counts[c] ?? 0}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="product-toolbar">
             <div className="product-toolbar-search">
@@ -79,16 +149,20 @@ const HomePage = () => {
             </div>
           )}
 
-          {!loading && !error && sortedProducts.length === 0 && (
+          {!loading && !error && filteredProducts.length === 0 && (
             <div className="empty-block">
               <h3>Sonuç bulunamadı</h3>
-              <p>Arama kriterlerine uygun ders bulunamadı.</p>
+              <p>
+                {activeCategory === ALL
+                  ? 'Arama kriterlerine uygun ders bulunamadı.'
+                  : `"${activeCategory}" kategorisinde ${searchQuery ? 'aradığın derse' : 'henüz derse'} rastlanmadı.`}
+              </p>
             </div>
           )}
 
-          {!loading && !error && sortedProducts.length > 0 && (
+          {!loading && !error && filteredProducts.length > 0 && (
             <div className="product-grid">
-              {sortedProducts.map((product) => (
+              {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

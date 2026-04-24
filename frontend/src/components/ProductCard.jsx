@@ -9,7 +9,12 @@ const ProductCard = ({ product }) => {
 
   return (
     <article className="product-card">
-      <div className="product-card-badge">{product.code}</div>
+      <div className="product-card-tags">
+        <span className="product-card-badge">{product.code}</span>
+        {product.category && (
+          <span className="product-card-category">{product.category}</span>
+        )}
+      </div>
       <h3 className="product-card-title">{product.name}</h3>
       <p className="product-card-desc">{product.description}</p>
 
