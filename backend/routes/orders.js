@@ -6,6 +6,7 @@ const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
 const { generateInvoicePdf } = require('../services/pdfService');
 const { sendInvoiceEmail } = require('../services/emailService');
+const { consumeTransaction } = require('../lib/paymentStore');
 
 const ORDER_STATUSES = ['Processing', 'In Transit', 'Delivered'];
 const REQUIRED_ADDRESS_FIELDS = [
@@ -33,7 +34,7 @@ router.get('/me', authenticate, async (req, res) => {
 
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { items, shippingAddress } = req.body;
+    const { items, shippingAddress, paymentTransactionId } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Your cart is empty.' });
@@ -41,6 +42,13 @@ router.post('/', authenticate, async (req, res) => {
 
     if (!shippingAddress || typeof shippingAddress !== 'object') {
       return res.status(400).json({ error: 'Please enter a shipping address.' });
+    }
+
+    const payment = consumeTransaction(paymentTransactionId, {
+      userId: req.user.id.toString(),
+    });
+    if (!payment.ok) {
+      return res.status(402).json({ error: payment.error });
     }
 
     const cleanShippingAddress = {};
@@ -101,6 +109,10 @@ router.post('/', authenticate, async (req, res) => {
       totalPrice,
       shippingAddress: cleanShippingAddress,
       status: 'Processing',
+      paymentTransactionId,
+      paymentStatus: 'approved',
+      paymentCardLast4: payment.record.cardLast4 || '',
+      paidAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
     });
 
     for (const item of items) {

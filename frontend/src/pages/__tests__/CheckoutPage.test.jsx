@@ -46,6 +46,20 @@ function fillAddress() {
   fireEvent.change(screen.getByPlaceholderText('Türkiye'), { target: { value: 'Turkey' } });
 }
 
+function goToPaymentStep() {
+  fillAddress();
+  fireEvent.click(screen.getByRole('button', { name: /Ödemeye Geç/i }));
+}
+
+function fillPayment({ cardNumber = '4242 4242 4242 4242', expiry = '12/30', cvv = '123' } = {}) {
+  fireEvent.change(screen.getByPlaceholderText(/4242 4242/), { target: { value: cardNumber } });
+  fireEvent.change(screen.getByPlaceholderText('12/28'), { target: { value: expiry } });
+  fireEvent.change(screen.getByPlaceholderText('123'), { target: { value: cvv } });
+  // Only one "Ad Soyad" input is visible on the payment step (cardholder),
+  // because the shipping step is unmounted.
+  fireEvent.change(screen.getByPlaceholderText('Ad Soyad'), { target: { value: 'Test User' } });
+}
+
 describe('CheckoutPage', () => {
   beforeEach(() => {
     navigateMock.mockReset();
@@ -63,7 +77,7 @@ describe('CheckoutPage', () => {
     expect(screen.getByRole('button', { name: /Giriş Yap/i })).toBeInTheDocument();
   });
 
-  test('renders all five address inputs when authenticated', () => {
+  test('renders all five address inputs on the shipping step', () => {
     renderCheckout({
       items: [{ id: 'p1', code: 'CS', name: 'SE', price: 100, quantity: 1 }],
       totalPrice: 100,
@@ -75,9 +89,9 @@ describe('CheckoutPage', () => {
     expect(screen.getByPlaceholderText('Türkiye')).toBeInTheDocument();
   });
 
-  test('submit button is disabled when cart is empty', () => {
+  test('shipping "continue" button is disabled when cart is empty', () => {
     renderCheckout({ items: [], totalPrice: 0 });
-    const btn = screen.getByRole('button', { name: /Siparişi Tamamla/i });
+    const btn = screen.getByRole('button', { name: /Ödemeye Geç/i });
     expect(btn).toBeDisabled();
   });
 
@@ -96,16 +110,39 @@ describe('CheckoutPage', () => {
     expect(screen.getByText(/Sepetiniz boş/i)).toBeInTheDocument();
   });
 
-  test('posts order and clears cart on successful submit', async () => {
-    apiMock.post.mockResolvedValueOnce({ id: 'o1', status: 'Processing' });
+  test('advances to the payment step after shipping is filled', () => {
+    renderCheckout({
+      items: [{ id: 'p1', code: 'CS', name: 'SE', price: 100, quantity: 1 }],
+      totalPrice: 100,
+    });
+    goToPaymentStep();
+    expect(screen.getByRole('button', { name: /Siparişi Tamamla/i })).toBeInTheDocument();
+    expect(screen.getByText(/Mock Payment — No Real Card/i)).toBeInTheDocument();
+  });
+
+  test('authorizes payment then posts the order, clears the cart, and navigates', async () => {
+    apiMock.post
+      .mockResolvedValueOnce({ approved: true, transactionId: 'TXN-TEST', approvedAt: '2026-04-25T00:00:00Z' })
+      .mockResolvedValueOnce({ id: 'o1', status: 'Processing' });
+
     const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
     const { dispatch } = renderCheckout({ items, totalPrice: 100 });
 
-    fillAddress();
+    goToPaymentStep();
+    fillPayment();
     fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
 
     await waitFor(() => {
-      expect(apiMock.post).toHaveBeenCalledWith('/api/orders', expect.objectContaining({
+      expect(apiMock.post).toHaveBeenNthCalledWith(1, '/api/payments/mock', expect.objectContaining({
+        cardHolderName: 'Test User',
+        cardNumber: '4242424242424242',
+        expiry: '12/30',
+        cvv: '123',
+      }));
+    });
+
+    await waitFor(() => {
+      expect(apiMock.post).toHaveBeenNthCalledWith(2, '/api/orders', expect.objectContaining({
         items,
         shippingAddress: {
           fullName: 'Test User',
@@ -114,6 +151,7 @@ describe('CheckoutPage', () => {
           postalCode: '34000',
           country: 'Turkey',
         },
+        paymentTransactionId: 'TXN-TEST',
       }));
     });
 
@@ -124,12 +162,46 @@ describe('CheckoutPage', () => {
     );
   });
 
-  test('surfaces API error message on failed submit', async () => {
-    apiMock.post.mockRejectedValueOnce(new Error('Not enough stock for CS 308.'));
+  test('shows the bank decline message and does not call /api/orders when payment is declined', async () => {
+    apiMock.post.mockResolvedValueOnce({ approved: false, reason: 'declined_by_bank', error: 'The bank declined this card.' });
+
     const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
     renderCheckout({ items, totalPrice: 100 });
 
-    fillAddress();
+    goToPaymentStep();
+    fillPayment({ cardNumber: '4242 4242 4242 0000' });
+    fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/bank declined/i)).toBeInTheDocument();
+    });
+
+    expect(apiMock.post).toHaveBeenCalledTimes(1);
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  test('validates payment fields client-side before calling the API', () => {
+    const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
+    renderCheckout({ items, totalPrice: 100 });
+
+    goToPaymentStep();
+    fillPayment({ cvv: '12' });
+    fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
+
+    expect(screen.getByText(/CVV 3 haneli olmalı/i)).toBeInTheDocument();
+    expect(apiMock.post).not.toHaveBeenCalled();
+  });
+
+  test('surfaces API error message on failed order submit', async () => {
+    apiMock.post
+      .mockResolvedValueOnce({ approved: true, transactionId: 'TXN-TEST' })
+      .mockRejectedValueOnce(new Error('Not enough stock for CS 308.'));
+
+    const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
+    renderCheckout({ items, totalPrice: 100 });
+
+    goToPaymentStep();
+    fillPayment();
     fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
 
     await waitFor(() => {
