@@ -1,0 +1,10 @@
+{
+  "name": "cs308-team-29",
+  "private": true,
+  "scripts": {
+    "test": "pnpm --dir backend test && pnpm --dir frontend test",
+    "test:backend": "pnpm --dir backend test",
+    "test:frontend": "pnpm --dir frontend test",
+    "test:coverage": "pnpm --dir backend test -- --coverage && pnpm --dir frontend test -- --coverage"
+  }
+}
