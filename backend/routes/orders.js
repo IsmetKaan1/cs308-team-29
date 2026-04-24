@@ -1,8 +1,11 @@
 const express = require('express');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const User = require('../models/User');
 const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
+const { generateInvoicePdf } = require('../services/pdfService');
+const { sendInvoiceEmail } = require('../services/emailService');
 
 const ORDER_STATUSES = ['Processing', 'In Transit', 'Delivered'];
 const REQUIRED_ADDRESS_FIELDS = [
@@ -110,6 +113,20 @@ router.post('/', authenticate, async (req, res) => {
       }
     }
 
+    // Async Invoice Generation & Email Sending
+    (async () => {
+      try {
+        const user = await User.findById(req.user.id);
+        if (user && user.email) {
+          const pdfBuffer = await generateInvoicePdf(order);
+          await sendInvoiceEmail(user.email, order, pdfBuffer);
+          console.log(`Invoice sent successfully to ${user.email} for order ${order._id}`);
+        }
+      } catch (err) {
+        console.error('Error in async invoice generation/email sending for order', order._id, ':', err.message);
+      }
+    })();
+
     res.status(201).json(order);
   } catch (err) {
     if (err.name === 'CastError') {
@@ -131,6 +148,28 @@ router.patch('/:id/status', authenticate, requireRole('product_manager'), async 
     res.json(order);
   } catch {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.get('/:id/invoice', authenticate, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.userId !== req.user.id.toString() && req.user.role !== 'product_manager') {
+      return res.status(403).json({ error: 'Not authorized to view this invoice' });
+    }
+
+    const pdfBuffer = await generateInvoicePdf(order);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="invoice_${order._id}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Error generating invoice PDF:', err);
+    res.status(500).json({ error: 'Could not generate invoice' });
   }
 });
 
