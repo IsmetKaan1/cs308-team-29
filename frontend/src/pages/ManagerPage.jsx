@@ -17,6 +17,7 @@ function formatDate(value) {
 }
 
 function ManagerGate({ onAuthed }) {
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -38,9 +39,22 @@ function ManagerGate({ onAuthed }) {
     }
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/login');
+  };
+
   return (
     <div className="manager-gate">
       <form className="manager-gate-card" onSubmit={handleSubmit} noValidate>
+        <button
+          type="button"
+          className="auth-back"
+          onClick={handleBack}
+          aria-label="Geri dön"
+        >
+          ← Geri
+        </button>
         <h1>Yönetici Girişi</h1>
         <p>Yorumları onaylamak için yönetici şifresini gir.</p>
 
