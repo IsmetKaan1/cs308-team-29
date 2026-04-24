@@ -48,9 +48,9 @@ const ProductDetail = () => {
       <div style={styles.container}>
         <button onClick={() => navigate('/')} style={styles.back}>← Shop</button>
         <div style={styles.emptyCard}>
-          <h2>Product not available</h2>
-          <p>{error || 'Product not found.'}</p>
-          <button onClick={() => navigate('/')} style={styles.primaryButton}>Back to Shop</button>
+          <h2 style={{ fontSize: '2rem', color: '#dc3545' }}>404 - Product Not Found</h2>
+          <p>{error || 'The product you are looking for does not exist or has been removed.'}</p>
+          <button onClick={() => navigate('/')} style={styles.primaryButton}>Return to Homepage</button>
         </div>
       </div>
     );
