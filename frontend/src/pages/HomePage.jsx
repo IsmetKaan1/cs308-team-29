@@ -60,16 +60,16 @@ const HomePage = () => {
       </div>
 
       <div style={styles.sortBar}>
-        <label htmlFor="sort" style={styles.sortLabel}>Sort by Price:</label>
+        <label htmlFor="sort" style={styles.sortLabel}>Fiyata Göre Sırala:</label>
         <select
           id="sort"
           value={sortOption}
           onChange={(e) => setSortOption(e.target.value)}
           style={styles.select}
         >
-          <option value="">Default</option>
-          <option value="price-asc">Low to High</option>
-          <option value="price-desc">High to Low</option>
+          <option value="">Varsayılan</option>
+          <option value="price-asc">Artan Fiyat</option>
+          <option value="price-desc">Azalan Fiyat</option>
         </select>
       </div>
 
