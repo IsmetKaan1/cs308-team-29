@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import CartIcon from '../components/CartIcon';
 import ProfileIcon from '../components/ProfileIcon';
@@ -6,6 +7,7 @@ import CartSidebar from '../components/CartSidebar';
 import { api } from '../api';
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,10 @@ const HomePage = () => {
     <div style={styles.container}>
       <div style={styles.topBar}>
         <h1 style={styles.header}>CS Dersleri</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button onClick={() => navigate('/orders')} style={{ background: 'none', border: '1px solid #4f46e5', color: '#4f46e5', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
+            My Orders
+          </button>
           <CartIcon />
           <ProfileIcon />
         </div>
