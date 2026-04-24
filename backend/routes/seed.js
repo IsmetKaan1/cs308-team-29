@@ -2,8 +2,11 @@ const express = require('express');
 const User = require('../models/User');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const requireDevEnv = require('../middleware/requireDevEnv');
 
 const router = express.Router();
+
+router.use(requireDevEnv);
 
 // POST /api/seed/pm — promote a user to product_manager by email
 router.post('/pm', async (req, res) => {
