@@ -6,6 +6,7 @@ function baseProductData(overrides = {}) {
     name: 'Test Product',
     description: 'A thing for testing',
     price: 99.99,
+    category: 'Programming',
     serialNumber: 'SN-TEST-0001',
     quantityInStock: 10,
     ...overrides,
@@ -79,5 +80,25 @@ describe('Product schema', () => {
   test('accepts zero as a valid quantityInStock', () => {
     const p = new Product(baseProductData({ quantityInStock: 0 }));
     expect(p.validateSync()).toBeUndefined();
+  });
+
+  test('rejects missing category', () => {
+    const p = new Product(baseProductData({ category: undefined }));
+    expect(p.validateSync().errors.category).toBeDefined();
+  });
+
+  test('rejects category value outside the allowed enum', () => {
+    const p = new Product(baseProductData({ category: 'Totally Not A Category' }));
+    expect(p.validateSync().errors.category).toBeDefined();
+  });
+
+  test('exposes the canonical category list on the model', () => {
+    expect(Product.CATEGORIES).toEqual(expect.arrayContaining([
+      'Programming',
+      'Algorithms',
+      'Systems',
+      'Software Engineering',
+      'AI & Data Science',
+    ]));
   });
 });

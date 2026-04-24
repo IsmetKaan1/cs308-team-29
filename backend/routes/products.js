@@ -4,9 +4,23 @@ const Product = require('../models/Product');
 
 const router = express.Router();
 
+router.get('/categories', (req, res) => {
+  res.json(Product.CATEGORIES);
+});
+
 router.get('/', async (req, res) => {
   try {
-    const products = await Product.find().sort('_id');
+    const { category } = req.query;
+    const filter = {};
+
+    if (category && category !== 'all') {
+      if (!Product.CATEGORIES.includes(category)) {
+        return res.status(400).json({ error: 'Invalid category.' });
+      }
+      filter.category = category;
+    }
+
+    const products = await Product.find(filter).sort('_id');
     res.json(products);
   } catch (error) {
     console.error('Failed to get products:', error);
@@ -31,18 +45,22 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { code, name, description, price, serialNumber, quantityInStock, warrantyMonths, distributorInfo, model } = req.body;
+  const {
+    code, name, description, price, category,
+    serialNumber, quantityInStock, warrantyMonths, distributorInfo, model,
+  } = req.body;
 
   const missing = [];
   if (serialNumber === undefined || serialNumber === null || serialNumber === '') missing.push('serialNumber');
   if (quantityInStock === undefined || quantityInStock === null) missing.push('quantityInStock');
+  if (category === undefined || category === null || category === '') missing.push('category');
   if (missing.length) {
     return res.status(400).json({ error: `Missing required field(s): ${missing.join(', ')}` });
   }
 
   try {
     const product = await Product.create({
-      code, name, description, price,
+      code, name, description, price, category,
       serialNumber, quantityInStock,
       warrantyMonths, distributorInfo, model,
     });
