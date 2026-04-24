@@ -14,6 +14,7 @@ const usbRoutes = require('./routes/usb');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
 const paymentRoutes = require('./routes/payments');
+const { productReviewsRouter, reviewsRouter } = require('./routes/reviews');
 const seedRoutes = require('./routes/seed');
 const connectMongoDB = require('./mongoDb');
 
@@ -28,6 +29,8 @@ connectMongoDB();
 app.use('/api', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/products/:productId/reviews', productReviewsRouter);
+app.use('/api/reviews', reviewsRouter);
 app.use('/api/usb', usbRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);

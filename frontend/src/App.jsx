@@ -8,6 +8,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ProductDetail from './pages/ProductDetail';
 import OrdersPage from './pages/OrdersPage';
+import ManagerPage from './pages/ManagerPage';
 
 export default function App() {
   return (
@@ -20,9 +21,10 @@ export default function App() {
           <Route path="/settings" element={<ProfileSettingsPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/manager" element={<ManagerPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>

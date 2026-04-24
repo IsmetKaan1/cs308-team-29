@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/cartStore';
+import Stars from './Stars';
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const { dispatch } = useCart();
   const availableStock = product.quantityInStock ?? product.stock;
   const isOutOfStock = availableStock != null && availableStock <= 0;
+  const hasReviews = (product.reviewCount || 0) > 0;
 
   return (
     <article className="product-card">
@@ -16,6 +18,13 @@ const ProductCard = ({ product }) => {
         )}
       </div>
       <h3 className="product-card-title">{product.name}</h3>
+      {hasReviews && (
+        <div className="product-card-rating">
+          <Stars value={product.averageRating} />
+          <span>{product.averageRating.toFixed(1)}</span>
+          <span style={{ color: 'var(--color-ink-500)' }}>({product.reviewCount})</span>
+        </div>
+      )}
       <p className="product-card-desc">{product.description}</p>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>

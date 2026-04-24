@@ -65,10 +65,18 @@ async function requestBlob(path, { accept } = {}) {
   return res.blob();
 }
 
+function managerHeaders(pass) {
+  return pass ? { 'X-Manager-Pass': pass } : {};
+}
+
 export const api = {
   post:    (path, body) => request(path, { method: 'POST',  body: JSON.stringify(body) }),
   get:     (path)       => request(path),
   put:     (path, body) => request(path, { method: 'PUT',   body: JSON.stringify(body) }),
   patch:   (path, body) => request(path, { method: 'PATCH', body: JSON.stringify(body) }),
   getBlob: (path, opts) => requestBlob(path, opts),
+  managerGet:   (path, pass) =>
+    request(path, { headers: managerHeaders(pass) }),
+  managerPatch: (path, body, pass) =>
+    request(path, { method: 'PATCH', body: JSON.stringify(body), headers: managerHeaders(pass) }),
 };

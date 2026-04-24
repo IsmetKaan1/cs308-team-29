@@ -87,6 +87,10 @@ export default function LoginPage() {
         <p className="link-text">
           Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
         </p>
+
+        <p className="link-text" style={{ marginTop: 4, fontSize: 'var(--fs-12)' }}>
+          <Link to="/manager">Yönetici girişi</Link>
+        </p>
       </div>
     </div>
   );
