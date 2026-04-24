@@ -89,6 +89,11 @@ export default function ProfileSettingsPage() {
     navigate('/login');
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/');
+  };
+
   if (!user) {
     return (
       <div className="page">
@@ -113,6 +118,14 @@ export default function ProfileSettingsPage() {
       <main className="page-body">
         <div className="settings-header">
           <div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm settings-back-btn"
+              onClick={handleBack}
+              aria-label="Geri dön"
+            >
+              ← Geri
+            </button>
             <h1>Hesap Ayarları</h1>
             <p style={{ color: 'var(--color-ink-500)', fontSize: 'var(--fs-14)', marginTop: 4 }}>
               Profilini yönet ve şifreni güncelle.

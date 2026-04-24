@@ -749,6 +749,14 @@ input, select, textarea {
   letter-spacing: -0.01em;
 }
 
+.settings-back-btn {
+  margin-bottom: var(--space-2);
+  margin-left: -10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .settings-card {
   width: 100%;
   max-width: 680px;
