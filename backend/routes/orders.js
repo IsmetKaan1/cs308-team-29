@@ -5,6 +5,15 @@ const authenticate = require('../middleware/auth');
 
 const router = express.Router();
 
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.user.id.toString() }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.post('/', authenticate, async (req, res) => {
   const { items, shippingAddress } = req.body;
 
