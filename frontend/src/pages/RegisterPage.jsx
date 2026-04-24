@@ -29,14 +29,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    if (!isPasswordValid) {
-      setError('Please meet all password requirements.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match!');
-      return;
-    }
+    if (!isPasswordValid) { setError('Lütfen tüm şifre kurallarını karşıla.'); return; }
+    if (password !== confirmPassword) { setError('Şifreler eşleşmiyor.'); return; }
 
     setLoading(true);
     try {
@@ -54,30 +48,32 @@ export default function RegisterPage() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <button 
-          className="btn-secondary" 
-          onClick={() => navigate('/login')} 
-          style={{ marginBottom: '15px', padding: '8px 12px', width: 'auto', alignSelf: 'flex-start', display: 'flex', gap: '6px' }}
+        <button
+          type="button"
+          className="auth-back"
+          onClick={() => (step === 1 ? navigate('/login') : setStep(1))}
         >
-          &larr; Back to Login
+          ← {step === 1 ? 'Girişe dön' : 'Geri'}
         </button>
-        <div className="step-indicator">
+
+        <div className="step-indicator" aria-label={`Adım ${step} / 2`}>
           <span className={`step-dot ${step >= 1 ? 'active' : ''}`} />
           <span className={`step-dot ${step >= 2 ? 'active' : ''}`} />
         </div>
 
-        <h2>Create Account</h2>
+        <h2>Hesap Oluştur</h2>
         <p className="subtitle">
-          {step === 1 ? "Let's start with your email" : 'Tell us more about yourself'}
+          {step === 1 ? 'Önce e-posta adresinle başlayalım' : 'Biraz daha bilgi verir misin?'}
         </p>
 
         {error && <div className="error-message">{error}</div>}
 
         {step === 1 && (
-          <form onSubmit={handleNext}>
+          <form onSubmit={handleNext} noValidate>
             <div className="form-group">
-              <label>Email Address</label>
+              <label htmlFor="reg-email">E-posta</label>
               <input
+                id="reg-email"
                 type="email"
                 className="form-input"
                 value={email}
@@ -85,102 +81,116 @@ export default function RegisterPage() {
                 placeholder="name@example.com"
                 required
                 autoFocus
+                autoComplete="email"
               />
             </div>
-            <button type="submit" className="btn-primary">Continue</button>
+            <button type="submit" className="btn btn-primary btn-block btn-lg">Devam Et</button>
             <p className="link-text">
-              Already have an account? <Link to="/login">Sign in</Link>
+              Zaten hesabın var mı? <Link to="/login">Giriş yap</Link>
             </p>
           </form>
         )}
 
         {step === 2 && (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <div className="form-row">
               <div className="form-group">
-                <label>Username</label>
+                <label htmlFor="reg-username">Kullanıcı adı</label>
                 <input
+                  id="reg-username"
                   type="text"
                   className="form-input"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="johndoe"
                   required
+                  autoComplete="username"
                 />
               </div>
               <div className="form-group">
-                <label>Gender</label>
+                <label htmlFor="reg-gender">Cinsiyet</label>
                 <select
+                  id="reg-gender"
                   className="form-select"
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
                   required
                 >
-                  <option value="" disabled>Select</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                  <option value="Prefer not to say">Prefer not to say</option>
+                  <option value="" disabled>Seç</option>
+                  <option value="Male">Erkek</option>
+                  <option value="Female">Kadın</option>
+                  <option value="Other">Diğer</option>
+                  <option value="Prefer not to say">Belirtmek istemiyorum</option>
                 </select>
               </div>
             </div>
 
             <div className="form-group">
-              <label>Full Name</label>
+              <label htmlFor="reg-fullname">Ad Soyad</label>
               <input
+                id="reg-fullname"
                 type="text"
                 className="form-input"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="Ad Soyad"
                 required
+                autoComplete="name"
               />
             </div>
 
             <div className="form-group">
-              <label>Password</label>
+              <label htmlFor="reg-password">Şifre</label>
               <input
+                id="reg-password"
                 type="password"
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a strong password"
+                placeholder="Güçlü bir şifre oluştur"
                 required
+                autoComplete="new-password"
               />
-              <ul className="password-rules">
+              <ul className="password-rules" aria-label="Şifre gereksinimleri">
                 <li className={hasMinLength ? 'valid' : 'invalid'}>
-                  {hasMinLength ? '\u2713' : '\u2717'} At least 8 characters
+                  {hasMinLength ? '✓' : '○'} En az 8 karakter
                 </li>
                 <li className={hasUppercase ? 'valid' : 'invalid'}>
-                  {hasUppercase ? '\u2713' : '\u2717'} At least 1 uppercase letter
+                  {hasUppercase ? '✓' : '○'} 1 büyük harf
                 </li>
                 <li className={hasLowercase ? 'valid' : 'invalid'}>
-                  {hasLowercase ? '\u2713' : '\u2717'} At least 1 lowercase letter
+                  {hasLowercase ? '✓' : '○'} 1 küçük harf
                 </li>
                 <li className={hasNumber ? 'valid' : 'invalid'}>
-                  {hasNumber ? '\u2713' : '\u2717'} At least 1 number
+                  {hasNumber ? '✓' : '○'} 1 rakam
                 </li>
               </ul>
             </div>
 
             <div className="form-group">
-              <label>Confirm Password</label>
+              <label htmlFor="reg-confirm">Şifreyi onayla</label>
               <input
+                id="reg-confirm"
                 type="password"
                 className="form-input"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat your password"
+                placeholder="Şifreyi tekrar gir"
                 required
+                autoComplete="new-password"
               />
             </div>
 
             <div className="btn-row">
-              <button type="button" className="btn-secondary" onClick={() => setStep(1)}>
-                Back
+              <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
+                Geri
               </button>
-              <button type="submit" className="btn-primary" disabled={!isPasswordValid || loading}>
-                {loading ? 'Creating...' : 'Sign Up'}
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={!isPasswordValid || loading}
+              >
+                {loading ? 'Oluşturuluyor...' : 'Kayıt Ol'}
               </button>
             </div>
           </form>

@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import AppHeader from '../components/AppHeader';
 import OrderStepper from '../components/OrderStepper';
-import ProfileIcon from '../components/ProfileIcon';
-import CartIcon from '../components/CartIcon';
+import Spinner from '../components/Spinner';
 
 const STATUSES = ['Processing', 'In Transit', 'Delivered'];
 
 export default function OrdersPage() {
   const navigate = useNavigate();
-  const [orders, setOrders]     = useState([]);
+  const [orders, setOrders] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [updating, setUpdating] = useState({});
   const [feedback, setFeedback] = useState({});
   const [selectedStatuses, setSelectedStatuses] = useState({});
@@ -36,7 +36,7 @@ export default function OrdersPage() {
           localStorage.removeItem('user');
           navigate('/login');
         } else {
-          setError('Could not load your orders. Please try again.');
+          setError('Siparişlerin yüklenemedi. Lütfen tekrar dene.');
         }
       })
       .finally(() => setLoading(false));
@@ -44,7 +44,7 @@ export default function OrdersPage() {
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (currentUser?.role !== 'product_manager') {
-      setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: 'You are not allowed to update order status.' } }));
+      setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: 'Sipariş durumunu güncelleme yetkin yok.' } }));
       return;
     }
 
@@ -54,7 +54,7 @@ export default function OrdersPage() {
       const updated = await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)));
       setSelectedStatuses((prev) => ({ ...prev, [orderId]: updated.status }));
-      setFeedback((f) => ({ ...f, [orderId]: { type: 'ok', text: 'Status updated.' } }));
+      setFeedback((f) => ({ ...f, [orderId]: { type: 'ok', text: 'Durum güncellendi.' } }));
     } catch (err) {
       setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: err.message } }));
     } finally {
@@ -62,122 +62,112 @@ export default function OrdersPage() {
     }
   };
 
-  if (loading) return <div style={styles.center}>Loading orders…</div>;
-
   const canUpdateStatus = currentUser?.role === 'product_manager';
 
   return (
-    <div style={styles.container}>
-      <div style={styles.topBar}>
-        <button onClick={() => navigate('/')} style={styles.back}>← Shop</button>
-        <h1 style={styles.title}>My Orders</h1>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <CartIcon />
-          <ProfileIcon />
-        </div>
-      </div>
-
-      {error && <p style={styles.globalError}>{error}</p>}
-
-      {orders.length === 0 && !error && (
-        <div style={styles.empty}>
-          <p>You have no orders yet.</p>
-          <button onClick={() => navigate('/')} style={styles.shopBtn}>Start Shopping</button>
-        </div>
-      )}
-
-      <div style={styles.list}>
-        {orders.map((order) => (
-          <div key={order.id} style={styles.card}>
-            <div style={styles.cardHeader}>
-              <div>
-                <span style={styles.orderId}>Order #{order.id.slice(-8).toUpperCase()}</span>
-                <span style={styles.date}>{new Date(order.createdAt).toLocaleDateString()}</span>
-              </div>
-              <span style={styles.total}>₺{order.totalPrice.toFixed(2)}</span>
-            </div>
-
-            <div style={styles.cardBody}>
-              <div style={styles.items}>
-                {order.items.map((item, i) => (
-                  <div key={i} style={styles.item}>
-                    <span style={styles.itemCode}>{item.code}</span>
-                    <span style={styles.itemName}>{item.name}</span>
-                    <span style={styles.itemQty}>×{item.quantity}</span>
-                    <span style={styles.itemPrice}>₺{(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={styles.stepperCol}>
-                <OrderStepper status={order.status} />
-              </div>
-            </div>
-
-            {canUpdateStatus && (
-              <div style={styles.updateRow}>
-                <select
-                  value={selectedStatuses[order.id] || order.status}
-                  onChange={(e) => setSelectedStatuses((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                  style={styles.select}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                <button
-                  style={styles.updateBtn}
-                  disabled={updating[order.id]}
-                  onClick={() => handleStatusUpdate(order.id, selectedStatuses[order.id] || order.status)}
-                >
-                  {updating[order.id] ? 'Saving…' : 'Update Status'}
-                </button>
-              </div>
-            )}
-
-            {canUpdateStatus && (
-              <div style={styles.feedbackRow}>
-                {feedback[order.id] && (
-                  <span style={feedback[order.id].type === 'ok' ? styles.feedbackOk : styles.feedbackErr}>
-                    {feedback[order.id].text}
-                  </span>
-                )}
-              </div>
-            )}
+    <div className="page">
+      <AppHeader />
+      <main className="page-body">
+        <div className="container-md" style={{ marginBottom: 'var(--space-6)' }}>
+          <div className="page-hero">
+            <h1>Siparişlerim</h1>
+            <p>Geçmiş siparişlerini ve durumlarını buradan takip edebilirsin.</p>
           </div>
-        ))}
-      </div>
+        </div>
+
+        {loading && <Spinner label="Siparişler yükleniyor..." />}
+
+        {error && !loading && (
+          <div className="container-md">
+            <div className="error-message" role="alert">{error}</div>
+          </div>
+        )}
+
+        {!loading && !error && orders.length === 0 && (
+          <div className="container-md">
+            <div className="empty-state">
+              <h2>Henüz siparişin yok</h2>
+              <p>Alışverişe başlayarak ilk siparişini oluştur.</p>
+              <button className="btn btn-primary btn-lg" onClick={() => navigate('/')}>
+                Alışverişe Başla
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && orders.length > 0 && (
+          <div className="orders-list">
+            {orders.map((order) => (
+              <article key={order.id} className="order-card">
+                <div className="order-card-header">
+                  <div>
+                    <span className="order-id">Sipariş #{order.id.slice(-8).toUpperCase()}</span>
+                    <span className="order-date">
+                      {new Date(order.createdAt).toLocaleDateString('tr-TR', {
+                        day: '2-digit', month: 'long', year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <span className="order-total">{order.totalPrice.toFixed(2)} ₺</span>
+                </div>
+
+                <div className="order-card-body">
+                  <div className="order-items">
+                    {order.items.map((item, i) => (
+                      <div key={i} className="order-item-row">
+                        <span className="cart-item-code">{item.code}</span>
+                        <span className="order-item-name">{item.name}</span>
+                        <span className="order-item-qty">×{item.quantity}</span>
+                        <span className="order-item-price">
+                          {(item.price * item.quantity).toFixed(2)} ₺
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <OrderStepper status={order.status} />
+                  </div>
+                </div>
+
+                {canUpdateStatus && (
+                  <div className="order-update-row">
+                    <select
+                      className="form-select"
+                      value={selectedStatuses[order.id] || order.status}
+                      onChange={(e) =>
+                        setSelectedStatuses((prev) => ({ ...prev, [order.id]: e.target.value }))
+                      }
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      disabled={updating[order.id]}
+                      onClick={() =>
+                        handleStatusUpdate(order.id, selectedStatuses[order.id] || order.status)
+                      }
+                    >
+                      {updating[order.id] ? 'Kaydediliyor...' : 'Durumu Güncelle'}
+                    </button>
+                    {feedback[order.id] && (
+                      <span
+                        className={`order-feedback ${
+                          feedback[order.id].type === 'ok' ? 'order-feedback--ok' : 'order-feedback--err'
+                        }`}
+                      >
+                        {feedback[order.id].text}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
-
-const styles = {
-  container:   { maxWidth: 800, margin: '0 auto', padding: '24px 16px', fontFamily: 'sans-serif' },
-  topBar:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
-  back:        { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#4f46e5', padding: 0 },
-  title:       { margin: 0, fontSize: 22, fontWeight: 700 },
-  center:      { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', fontSize: 16 },
-  globalError: { color: '#dc2626', textAlign: 'center', marginBottom: 16 },
-  empty:       { textAlign: 'center', padding: '60px 0', color: '#6b7280' },
-  shopBtn:     { marginTop: 12, padding: '10px 24px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  list:        { display: 'flex', flexDirection: 'column', gap: 20 },
-  card:        { border: '1px solid #e5e7eb', borderRadius: 10, padding: 20, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
-  cardHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 8 },
-  orderId:     { fontWeight: 700, fontSize: 14, display: 'block' },
-  date:        { fontSize: 12, color: '#9ca3af', display: 'block', marginTop: 2 },
-  total:       { fontWeight: 700, fontSize: 16, color: '#111' },
-  cardBody:    { display: 'flex', gap: 24, justifyContent: 'space-between', flexWrap: 'wrap' },
-  items:       { flex: 1, display: 'flex', flexDirection: 'column', gap: 8 },
-  item:        { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 },
-  itemCode:    { background: '#ede9fe', color: '#6d28d9', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 700, flexShrink: 0 },
-  itemName:    { flex: 1, color: '#374151' },
-  itemQty:     { color: '#6b7280', flexShrink: 0 },
-  itemPrice:   { fontWeight: 600, flexShrink: 0 },
-  stepperCol:  { display: 'flex', alignItems: 'flex-start', paddingTop: 2 },
-  updateRow:   { display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' },
-  feedbackRow: { marginTop: 8 },
-  select:      { padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, cursor: 'pointer' },
-  updateBtn:   { padding: '6px 14px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
-  feedbackOk:  { fontSize: 12, color: '#16a34a' },
-  feedbackErr: { fontSize: 12, color: '#dc2626' },
-};
