@@ -21,7 +21,11 @@ const orderSchema = new mongoose.Schema({
   items: { type: [orderItemSchema], required: true },
   totalPrice: { type: Number, required: true },
   shippingAddress: { type: shippingAddressSchema, required: true },
-  status: { type: String, default: 'processing' },
+  status: {
+    type: String,
+    enum: ['Processing', 'In Transit', 'Delivered'],
+    default: 'Processing',
+  },
   createdAt: { type: Date, default: Date.now },
 });
 

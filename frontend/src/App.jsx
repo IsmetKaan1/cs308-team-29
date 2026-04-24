@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ProductDetail from './pages/ProductDetail';
+import OrdersPage from './pages/OrdersPage';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/orders" element={<OrdersPage />} />
         </Routes>
       </BrowserRouter>
     </CartProvider>
