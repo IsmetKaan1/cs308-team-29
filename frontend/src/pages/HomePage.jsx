@@ -48,11 +48,12 @@ const HomePage = () => {
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '20px' }}>
         <input
           type="text"
           placeholder="Ders ara (isim, kod veya içerik)..."
           className="form-input"
+          style={{ width: '80%' }}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
