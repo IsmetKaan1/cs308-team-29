@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { computeInvoiceTotals } = require('../lib/invoiceTotals');
 
 function generateInvoicePdf(order) {
   return new Promise((resolve, reject) => {
@@ -26,26 +27,25 @@ function generateInvoicePdf(order) {
       doc.text(order.shippingAddress.country);
       doc.moveDown(2);
 
-      // Product List
+      // Product List (prices are VAT-inclusive)
       doc.text('Products:', { underline: true });
       doc.moveDown();
 
-      let subtotal = 0;
-
-      order.items.forEach(item => {
+      order.items.forEach((item) => {
         const itemTotal = item.price * item.quantity;
-        subtotal += itemTotal;
-        doc.text(`${item.name} (x${item.quantity}) - $${itemTotal.toFixed(2)}`);
+        doc.text(`${item.name} (x${item.quantity}) - $${itemTotal.toFixed(2)} (VAT incl.)`);
       });
 
       doc.moveDown();
-      
-      // Totals
-      const vat = subtotal * 0.18; // assuming 18% VAT
-      const total = subtotal + vat;
 
-      doc.text(`Subtotal: $${subtotal.toFixed(2)}`);
-      doc.text(`VAT (18%): $${vat.toFixed(2)}`);
+      // Totals — reverse-calculated from the inclusive order.totalPrice
+      // so the printed total matches what the customer actually paid.
+      const { subtotal, vat, total, vatRate } = computeInvoiceTotals({
+        totalPrice: order.totalPrice,
+      });
+
+      doc.text(`Subtotal (ex-VAT): $${subtotal.toFixed(2)}`);
+      doc.text(`VAT (${Math.round(vatRate * 100)}%): $${vat.toFixed(2)}`);
       doc.moveDown();
       doc.fontSize(14).text(`Total Amount: $${total.toFixed(2)}`, { bold: true });
 
