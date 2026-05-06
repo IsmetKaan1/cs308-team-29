@@ -10,7 +10,7 @@ if (!process.env.JWT_SECRET) {
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const productRoutes = require('./routes/products');
-const usbRoutes = require('./routes/usb');
+
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
 const paymentRoutes = require('./routes/payments');
@@ -31,7 +31,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/products/:productId/reviews', productReviewsRouter);
 app.use('/api/reviews', reviewsRouter);
-app.use('/api/usb', usbRoutes);
+
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
