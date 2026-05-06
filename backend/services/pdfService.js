@@ -1,10 +1,9 @@
 const PDFDocument = require('pdfkit');
-const { generateInvoice, formatCurrency } = require('../lib/invoice');
+const { computeInvoiceTotals } = require('../lib/invoiceTotals');
 
 function generateInvoicePdf(order) {
   return new Promise((resolve, reject) => {
     try {
-      const invoice = generateInvoice(order);
       const doc = new PDFDocument({ margin: 50 });
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
@@ -16,33 +15,39 @@ function generateInvoicePdf(order) {
       doc.moveDown();
 
       // Order info
-      doc.fontSize(12).text(`Invoice No: ${invoice.invoiceNumber}`);
-      doc.text(`Order ID: ${order._id}`);
-      doc.text(`Date: ${new Date(invoice.issuedAt).toLocaleDateString()}`);
+      doc.fontSize(12).text(`Order ID: ${order._id}`);
+      doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`);
       doc.moveDown();
 
       // Shipping Address
       doc.text('Shipping Address:', { underline: true });
-      doc.text(invoice.shippingAddress.fullName);
-      doc.text(invoice.shippingAddress.address);
-      doc.text(`${invoice.shippingAddress.city}, ${invoice.shippingAddress.postalCode}`);
-      doc.text(invoice.shippingAddress.country);
+      doc.text(order.shippingAddress.fullName);
+      doc.text(order.shippingAddress.address);
+      doc.text(`${order.shippingAddress.city}, ${order.shippingAddress.postalCode}`);
+      doc.text(order.shippingAddress.country);
       doc.moveDown(2);
 
-      // Product List
+      // Product List (prices are VAT-inclusive)
       doc.text('Products:', { underline: true });
       doc.moveDown();
 
-      invoice.lines.forEach((item) => {
-        doc.text(`${item.code} - ${item.name} (x${item.quantity}) - ${formatCurrency(item.lineTotal)}`);
+      order.items.forEach((item) => {
+        const itemTotal = item.price * item.quantity;
+        doc.text(`${item.name} (x${item.quantity}) - $${itemTotal.toFixed(2)} (VAT incl.)`);
       });
 
       doc.moveDown();
 
-      // Totals
-      doc.text(`Subtotal: ${formatCurrency(invoice.subtotal)}`);
+      // Totals — reverse-calculated from the inclusive order.totalPrice
+      // so the printed total matches what the customer actually paid.
+      const { subtotal, vat, total, vatRate } = computeInvoiceTotals({
+        totalPrice: order.totalPrice,
+      });
+
+      doc.text(`Subtotal (ex-VAT): $${subtotal.toFixed(2)}`);
+      doc.text(`VAT (${Math.round(vatRate * 100)}%): $${vat.toFixed(2)}`);
       doc.moveDown();
-      doc.fontSize(14).text(`Total Amount: ${invoice.formattedTotal}`, { bold: true });
+      doc.fontSize(14).text(`Total Amount: $${total.toFixed(2)}`, { bold: true });
 
       doc.end();
     } catch (err) {
