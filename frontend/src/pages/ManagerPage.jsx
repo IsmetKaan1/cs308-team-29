@@ -23,17 +23,30 @@ function ManagerGate({ onAuthed }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const hasToken = !!localStorage.getItem('token');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!localStorage.getItem('token')) {
+      setError('Önce product manager hesabıyla normal giriş yapmalısın. 1234 sadece ikinci manager şifresi.');
+      return;
+    }
+
     setBusy(true);
     try {
       await api.managerGet('/api/reviews/pending', password);
       sessionStorage.setItem(STORAGE_KEY, password);
       onAuthed(password);
     } catch (err) {
-      setError(err.message || 'Incorrect password.');
+      if (/No token provided|Invalid token/i.test(err.message || '')) {
+        setError('Login oturumu bulunamadı veya süresi doldu. Önce product manager hesabıyla giriş yap.');
+      } else if (/Forbidden|insufficient role/i.test(err.message || '')) {
+        setError('Bu hesap product manager değil. Product manager rolü olan bir hesapla giriş yapmalısın.');
+      } else {
+        setError(err.message || 'Incorrect password.');
+      }
     } finally {
       setBusy(false);
     }
@@ -51,9 +64,14 @@ function ManagerGate({ onAuthed }) {
           ← Back
         </button>
         <h1>Manager Login</h1>
-        <p>Enter the manager password to access the panel.</p>
+        <p>Önce product manager hesabıyla normal giriş yap, sonra manager şifresi olarak 1234 gir.</p>
 
         {error && <div className="error-message" role="alert">{error}</div>}
+        {!hasToken && (
+          <div className="review-status-banner review-status-banner--pending">
+            Aktif login token yok. Bu yüzden backend “No token provided” diyor.
+          </div>
+        )}
 
         <div className="form-group">
           <label htmlFor="manager-pass">Password</label>
@@ -71,6 +89,16 @@ function ManagerGate({ onAuthed }) {
         <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy || !password}>
           {busy ? 'Checking...' : 'Login'}
         </button>
+        {!hasToken && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-block"
+            style={{ marginTop: 12 }}
+            onClick={() => navigate('/login')}
+          >
+            Normal Giriş Sayfasına Git
+          </button>
+        )}
       </form>
     </div>
   );
@@ -83,7 +111,7 @@ export default function ManagerPage() {
   const [authed, setAuthed] = useState(!!sessionStorage.getItem(STORAGE_KEY));
   
  
-  const [activeTab, setActiveTab] = useState('reviews'); 
+  const [activeTab, setActiveTab] = useState('pending'); 
 
   // Yorumlar için olan eski state'lerin
   const [queue, setQueue] = useState([]);
@@ -96,7 +124,8 @@ export default function ManagerPage() {
     setLoading(true);
     setError('');
     try {
-      const list = await api.managerGet('/api/reviews/pending', managerPass);
+      const endpoint = activeTab === 'rejected' ? '/api/reviews/rejected' : '/api/reviews/pending';
+      const list = await api.managerGet(endpoint, managerPass);
       setQueue(list);
     } catch (err) {
       setError(err.message || 'Failed to load reviews.');
@@ -111,7 +140,7 @@ export default function ManagerPage() {
 
   useEffect(() => {
  
-    if (authed && pass && activeTab === 'reviews') loadQueue(pass);
+    if (authed && pass && (activeTab === 'pending' || activeTab === 'rejected')) loadQueue(pass);
   }, [authed, pass, activeTab]);
 
   const handleAuthed = (newPass) => {
@@ -129,10 +158,8 @@ export default function ManagerPage() {
     try {
       await api.managerPatch(`/api/reviews/${reviewId}/moderate`, { action, rejectionReason }, pass);
       setQueue((list) => list.filter((r) => r.id !== reviewId));
-      setFeedback((s) => ({
-        ...s,
-        [reviewId]: { type: 'ok', text: action === 'approve' ? 'Approved.' : 'Rejected.' },
-      }));
+      const labels = { approve: 'Approved.', reject: 'Rejected.', reopen: 'Restored to pending.' };
+      setFeedback((s) => ({ ...s, [reviewId]: { type: 'ok', text: labels[action] || 'Updated.' } }));
     } catch (err) {
       setFeedback((s) => ({ ...s, [reviewId]: { type: 'err', text: err.message } }));
     } finally {
@@ -164,10 +191,16 @@ export default function ManagerPage() {
           <nav className="app-nav">
 
             <button 
-              className={`btn ${activeTab === 'reviews' ? 'btn-primary' : 'btn-ghost-light'} btn-sm`} 
-              onClick={() => setActiveTab('reviews')}
+              className={`btn ${activeTab === 'pending' ? 'btn-primary' : 'btn-ghost-light'} btn-sm`} 
+              onClick={() => setActiveTab('pending')}
             >
               Pending Reviews
+            </button>
+            <button 
+              className={`btn ${activeTab === 'rejected' ? 'btn-primary' : 'btn-ghost-light'} btn-sm`} 
+              onClick={() => setActiveTab('rejected')}
+            >
+              Rejected Reviews
             </button>
             <button 
               className={`btn ${activeTab === 'stock' ? 'btn-primary' : 'btn-ghost-light'} btn-sm`} 
@@ -176,7 +209,7 @@ export default function ManagerPage() {
               Stock Management
             </button>
 
-            {activeTab === 'reviews' && (
+            {(activeTab === 'pending' || activeTab === 'rejected') && (
               <button className="btn btn-ghost-light btn-sm" onClick={() => loadQueue(pass)} disabled={loading}>
                 Refresh
               </button>
@@ -190,12 +223,16 @@ export default function ManagerPage() {
 
       <main className="page-body">
         
-        {activeTab === 'reviews' && (
+        {(activeTab === 'pending' || activeTab === 'rejected') && (
           <>
             <div className="container-md" style={{ marginBottom: 'var(--space-5)' }}>
               <div className="page-hero">
-                <h1>Pending Reviews</h1>
-                <p>Reviews are hidden from customers until approved.</p>
+                <h1>{activeTab === 'rejected' ? 'Rejected Reviews' : 'Pending Reviews'}</h1>
+                <p>
+                  {activeTab === 'rejected'
+                    ? 'Cancelled rejections are restored to pending review instead of disappearing.'
+                    : 'Reviews are hidden from customers until approved.'}
+                </p>
               </div>
             </div>
 
@@ -211,7 +248,7 @@ export default function ManagerPage() {
               <div className="container-md">
                 <div className="empty-state">
                   <h2>All clear 🎉</h2>
-                  <p>No pending reviews to moderate.</p>
+                  <p>{activeTab === 'rejected' ? 'No rejected reviews.' : 'No pending reviews to moderate.'}</p>
                 </div>
               </div>
             )}
@@ -235,24 +272,42 @@ export default function ManagerPage() {
                     </div>
 
                     {r.comment && <div className="moderation-card-body">{r.comment}</div>}
+                    {activeTab === 'rejected' && r.rejectionReason && (
+                      <div className="review-status-banner review-status-banner--rejected" style={{ marginTop: 12 }}>
+                        Reason: {r.rejectionReason}
+                      </div>
+                    )}
 
                     <div className="moderation-card-actions">
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        disabled={!!busyIds[r.id]}
-                        onClick={() => handleModerate(r.id, 'approve')}
-                      >
-                        {busyIds[r.id] ? '...' : 'Approve'}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        disabled={!!busyIds[r.id]}
-                        onClick={() => handleModerate(r.id, 'reject')}
-                      >
-                        Reject
-                      </button>
+                      {activeTab === 'pending' ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={!!busyIds[r.id]}
+                            onClick={() => handleModerate(r.id, 'approve')}
+                          >
+                            {busyIds[r.id] ? '...' : 'Approve'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            disabled={!!busyIds[r.id]}
+                            onClick={() => handleModerate(r.id, 'reject')}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          disabled={!!busyIds[r.id]}
+                          onClick={() => handleModerate(r.id, 'reopen')}
+                        >
+                          {busyIds[r.id] ? '...' : 'Restore to Pending'}
+                        </button>
+                      )}
                       {feedback[r.id] && (
                         <span
                           className={feedback[r.id].type === 'ok' ? 'order-feedback order-feedback--ok' : 'order-feedback order-feedback--err'}

@@ -79,11 +79,13 @@ const HomePage = () => {
       list = [...list].sort((a, b) => b.price - a.price);
     } else if (activeSort === 'popularity') {
       list = [...list].sort((a, b) => {
-        const salesDiff = (b.salesCount || 0) - (a.salesCount || 0);
-        if (salesDiff !== 0) return salesDiff;
+        const scoreDiff = (b.popularityScore || 0) - (a.popularityScore || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        const purchaseDiff = (b.purchaseCount || b.salesCount || 0) - (a.purchaseCount || a.salesCount || 0);
+        if (purchaseDiff !== 0) return purchaseDiff;
         const ratingDiff = (b.averageRating || 0) - (a.averageRating || 0);
         if (ratingDiff !== 0) return ratingDiff;
-        return a.name.localeCompare(b.name, 'tr');
+        return a.name.localeCompare(b.name, 'tr') || String(a.id).localeCompare(String(b.id));
       });
     }
     return list;

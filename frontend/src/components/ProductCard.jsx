@@ -30,7 +30,11 @@ const ProductCard = ({ product }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <div className="product-card-price">{product.price.toFixed(2)} ₺</div>
         <span className={`product-stock-chip${isOutOfStock ? ' product-stock-chip--out' : ''}`}>
-          {isOutOfStock ? 'Stokta yok' : 'Stokta'}
+          {availableStock == null
+            ? 'Stokta'
+            : isOutOfStock
+              ? 'Stokta yok'
+              : `${availableStock} adet stokta`}
         </span>
       </div>
 

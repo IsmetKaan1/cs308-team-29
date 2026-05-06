@@ -123,7 +123,7 @@ describe('CheckoutPage', () => {
   test('authorizes payment then posts the order, clears the cart, and navigates', async () => {
     apiMock.post
       .mockResolvedValueOnce({ approved: true, transactionId: 'TXN-TEST', approvedAt: '2026-04-25T00:00:00Z' })
-      .mockResolvedValueOnce({ id: 'o1', status: 'Processing' });
+      .mockResolvedValueOnce({ id: 'o1', status: 'processing' });
 
     const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
     const { dispatch } = renderCheckout({ items, totalPrice: 100 });

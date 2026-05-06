@@ -12,8 +12,18 @@ export default function StockPanel({ managerPass }) {
 
   const [searchInput, setSearchInput] = useState(currentSearch);
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [stockDrafts, setStockDrafts] = useState({});
+  const [updatingIds, setUpdatingIds] = useState({});
+  const [feedback, setFeedback] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get('/api/products/categories')
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => setCategories([]));
+  }, []);
 
   useEffect(() => {
     setSearchInput(currentSearch); 
@@ -33,6 +43,14 @@ export default function StockPanel({ managerPass }) {
 
       const data = await api.managerGet(`/api/products/stock?${query}`, managerPass);
       setProducts(data);
+      setStockDrafts(
+        Object.fromEntries(
+          data.map((product) => [
+            product.id,
+            String(product.quantityInStock ?? product.stock ?? 0),
+          ])
+        )
+      );
     } catch (err) {
       setError('Failed to load stock data or endpoint is not ready.');
       setProducts([]);
@@ -44,30 +62,75 @@ export default function StockPanel({ managerPass }) {
   const handleSearch = (e) => {
     e.preventDefault();
     setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
       if (searchInput.trim()) {
-        prev.set('q', searchInput.trim());
+        next.set('q', searchInput.trim());
       } else {
-        prev.delete('q'); 
+        next.delete('q'); 
       }
-      return prev;
+      return next;
     });
+  };
+
+  const handleStockDraftChange = (productId, value) => {
+    const digitsOnly = value.replace(/\D+/g, '');
+    setStockDrafts((prev) => ({ ...prev, [productId]: digitsOnly }));
+    setFeedback((prev) => ({ ...prev, [productId]: null }));
+  };
+
+  const handleStockUpdate = async (product) => {
+    const rawValue = stockDrafts[product.id];
+    const quantityInStock = Number(rawValue);
+
+    if (!Number.isInteger(quantityInStock) || quantityInStock < 0) {
+      setFeedback((prev) => ({
+        ...prev,
+        [product.id]: { type: 'err', text: 'Stock must be a non-negative integer.' },
+      }));
+      return;
+    }
+
+    setUpdatingIds((prev) => ({ ...prev, [product.id]: true }));
+    setFeedback((prev) => ({ ...prev, [product.id]: null }));
+    try {
+      const updated = await api.managerPatch(
+        `/api/products/${product.id}/stock`,
+        { quantityInStock },
+        managerPass
+      );
+      setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setStockDrafts((prev) => ({ ...prev, [updated.id]: String(updated.quantityInStock ?? 0) }));
+      setFeedback((prev) => ({
+        ...prev,
+        [product.id]: { type: 'ok', text: 'Saved.' },
+      }));
+    } catch (err) {
+      setFeedback((prev) => ({
+        ...prev,
+        [product.id]: { type: 'err', text: err.message || 'Could not update.' },
+      }));
+    } finally {
+      setUpdatingIds((prev) => ({ ...prev, [product.id]: false }));
+    }
   };
 
   const handleSort = (e) => {
     const val = e.target.value;
     setSearchParams((prev) => {
-      if (val) prev.set('sort', val);
-      else prev.delete('sort');
-      return prev; 
+      const next = new URLSearchParams(prev);
+      if (val) next.set('sort', val);
+      else next.delete('sort');
+      return next; 
     });
   };
 
   const handleCategory = (e) => {
     const val = e.target.value;
     setSearchParams((prev) => {
-      if (val) prev.set('category', val);
-      else prev.delete('category');
-      return prev;
+      const next = new URLSearchParams(prev);
+      if (val) next.set('category', val);
+      else next.delete('category');
+      return next;
     });
   };
 
@@ -94,8 +157,9 @@ export default function StockPanel({ managerPass }) {
 
         <select value={currentCategory} onChange={handleCategory} className="form-input" style={{ width: 'auto' }}>
           <option value="">All Categories</option>
-          <option value="electronics">Electronics</option>
-          <option value="clothing">Clothing</option>
+          {categories.map((category) => (
+            <option key={category} value={category}>{category}</option>
+          ))}
         </select>
       </div>
 
@@ -116,20 +180,59 @@ export default function StockPanel({ managerPass }) {
               <th>Product Code</th>
               <th>Name</th>
               <th>Stock</th>
+              <th>Popularity</th>
               <th>Action</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {products.map(p => (
-              <tr key={p.id}>
-                <td>{p.code}</td>
-                <td>{p.name}</td>
-                <td>{p.stock}</td>
-                <td>
-                  <button className="btn btn-sm btn-ghost-light">Update</button>
-                </td>
-              </tr>
-            ))}
+            {products.map((p) => {
+              const currentStock = p.quantityInStock ?? p.stock ?? 0;
+              const draft = stockDrafts[p.id] ?? String(currentStock);
+              const changed = Number(draft) !== currentStock;
+              return (
+                <tr key={p.id}>
+                  <td>{p.code}</td>
+                  <td>{p.name}</td>
+                  <td>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="form-input"
+                      value={draft}
+                      onChange={(e) => handleStockDraftChange(p.id, e.target.value)}
+                      style={{ maxWidth: 110 }}
+                      aria-label={`${p.code} stock`}
+                    />
+                  </td>
+                  <td>{p.popularityScore ?? 0}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      disabled={updatingIds[p.id] || !changed || draft === ''}
+                      onClick={() => handleStockUpdate(p)}
+                    >
+                      {updatingIds[p.id] ? 'Saving...' : 'Update'}
+                    </button>
+                  </td>
+                  <td>
+                    {feedback[p.id] && (
+                      <span
+                        className={`order-feedback ${
+                          feedback[p.id].type === 'ok'
+                            ? 'order-feedback--ok'
+                            : 'order-feedback--err'
+                        }`}
+                      >
+                        {feedback[p.id].text}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

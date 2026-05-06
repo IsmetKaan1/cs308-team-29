@@ -39,7 +39,7 @@ router.post('/orders', async (req, res) => {
       country: 'Turkey',
     };
 
-    const statuses = ['Processing', 'In Transit', 'Delivered'];
+    const statuses = ['processing', 'in-transit', 'delivered'];
 
     const orders = await Order.insertMany(
       statuses.map((status, i) => ({
@@ -54,6 +54,7 @@ router.post('/orders', async (req, res) => {
         totalPrice: products[i % products.length].price,
         shippingAddress: dummyAddress,
         status,
+        paymentTransactionId: `seed-${userId}-${i}-${Date.now()}`,
         createdAt: new Date(Date.now() - (2 - i) * 86400000),
       }))
     );

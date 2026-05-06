@@ -33,23 +33,21 @@ describe('sanitizeComment', () => {
 });
 
 describe('statusForNewReview', () => {
-  test('auto-approves rating-only reviews', () => {
-    expect(statusForNewReview({ comment: '' })).toBe('approved');
-    expect(statusForNewReview({ comment: '   ' })).toBe('approved');
-    expect(statusForNewReview({})).toBe('approved');
-  });
-
-  test('holds commented reviews for moderation', () => {
+  test('holds all new reviews for moderation', () => {
+    expect(statusForNewReview({ comment: '' })).toBe('pending');
+    expect(statusForNewReview({ comment: '   ' })).toBe('pending');
+    expect(statusForNewReview({})).toBe('pending');
     expect(statusForNewReview({ comment: 'nice course' })).toBe('pending');
   });
 });
 
 describe('statusForUpdatedReview', () => {
-  test('keeps existing approved status when comment is unchanged', () => {
+  test('keeps existing approved status when rating and comment are unchanged', () => {
     expect(
       statusForUpdatedReview({
-        existing: { comment: 'great', status: 'approved' },
+        existing: { comment: 'great', rating: 5, status: 'approved' },
         newComment: 'great',
+        newRating: 5,
       })
     ).toBe('approved');
   });
@@ -57,19 +55,21 @@ describe('statusForUpdatedReview', () => {
   test('resets to pending when comment text changes', () => {
     expect(
       statusForUpdatedReview({
-        existing: { comment: 'great', status: 'approved' },
+        existing: { comment: 'great', rating: 5, status: 'approved' },
         newComment: 'actually bad',
+        newRating: 5,
       })
     ).toBe('pending');
   });
 
-  test('approves when a previously-pending comment is removed', () => {
+  test('resets to pending when rating changes', () => {
     expect(
       statusForUpdatedReview({
-        existing: { comment: 'meh', status: 'pending' },
-        newComment: '',
+        existing: { comment: 'meh', rating: 2, status: 'approved' },
+        newComment: 'meh',
+        newRating: 3,
       })
-    ).toBe('approved');
+    ).toBe('pending');
   });
 });
 
@@ -93,6 +93,16 @@ describe('applyModeration', () => {
     const long = 'x'.repeat(600);
     const r2 = applyModeration({ action: 'reject', rejectionReason: long });
     expect(r2.patch.rejectionReason.length).toBe(500);
+  });
+
+  test('reopen restores a rejected review to pending without deleting it', () => {
+    const r = applyModeration({ action: 'reopen' });
+    expect(r.ok).toBe(true);
+    expect(r.patch).toMatchObject({
+      status: 'pending',
+      moderatedAt: null,
+      rejectionReason: '',
+    });
   });
 });
 

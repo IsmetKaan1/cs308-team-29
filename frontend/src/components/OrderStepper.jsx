@@ -1,12 +1,18 @@
-const STEPS = ['Processing', 'In Transit', 'Delivered'];
+const STEPS = ['processing', 'in-transit', 'delivered'];
 const LABELS_TR = {
-  Processing: 'Hazırlanıyor',
-  'In Transit': 'Kargoda',
-  Delivered: 'Teslim Edildi',
+  processing: 'Hazırlanıyor',
+  'in-transit': 'Kargoda',
+  delivered: 'Teslim Edildi',
+};
+const STATUS_ALIASES = {
+  Processing: 'processing',
+  'In Transit': 'in-transit',
+  Delivered: 'delivered',
 };
 
 export default function OrderStepper({ status }) {
-  const currentIndex = STEPS.indexOf(status);
+  const normalizedStatus = STATUS_ALIASES[status] || status;
+  const currentIndex = STEPS.indexOf(normalizedStatus);
 
   return (
     <div className="stepper" role="list" aria-label="Sipariş durumu">

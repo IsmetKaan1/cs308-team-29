@@ -1,14 +1,24 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const Cart = require('../models/Cart');
 const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
 const { generateInvoicePdf } = require('../services/pdfService');
 const { sendInvoiceEmail, isEmailConfigured } = require('../services/emailService');
 const { consumeTransaction } = require('../lib/paymentStore');
 
-const ORDER_STATUSES = ['Processing', 'In Transit', 'Delivered'];
+const ORDER_STATUSES = Order.STATUSES;
+const STATUS_ALIASES = {
+  Processing: 'processing',
+  'In Transit': 'in-transit',
+  Delivered: 'delivered',
+  processing: 'processing',
+  'in-transit': 'in-transit',
+  delivered: 'delivered',
+};
 const REQUIRED_ADDRESS_FIELDS = [
   ['fullName', 'Full name'],
   ['address', 'Address'],
@@ -18,7 +28,67 @@ const REQUIRED_ADDRESS_FIELDS = [
 ];
 
 function getAvailableStock(product) {
-  return product.quantityInStock ?? product.stock;
+  return product.quantityInStock ?? product.stock ?? 0;
+}
+
+function normalizeOrderStatus(status) {
+  return STATUS_ALIASES[status] || null;
+}
+
+function normalizeOrderItems(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { ok: false, status: 400, error: 'Your cart is empty.' };
+  }
+
+  const byId = new Map();
+  for (const item of items) {
+    const productId = item?.id || item?.productId;
+    if (!productId || !mongoose.isValidObjectId(productId)) {
+      return { ok: false, status: 400, error: 'One or more cart items are invalid.' };
+    }
+    if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+      return { ok: false, status: 400, error: 'Cart item quantities must be at least 1.' };
+    }
+
+    const key = productId.toString();
+    byId.set(key, (byId.get(key) || 0) + item.quantity);
+  }
+
+  return {
+    ok: true,
+    items: [...byId.entries()].map(([productId, quantity]) => ({ productId, quantity })),
+  };
+}
+
+async function reserveStock(orderItems) {
+  const reserved = [];
+
+  for (const item of orderItems) {
+    const result = await Product.updateOne(
+      { _id: item.productId, quantityInStock: { $gte: item.quantity } },
+      { $inc: { quantityInStock: -item.quantity } }
+    );
+
+    if (result.modifiedCount !== 1) {
+      await releaseStock(reserved);
+      return { ok: false, error: `Not enough stock for ${item.name}.` };
+    }
+
+    reserved.push(item);
+  }
+
+  return { ok: true, reserved };
+}
+
+async function releaseStock(items) {
+  await Promise.all(
+    items.map((item) =>
+      Product.updateOne(
+        { _id: item.productId },
+        { $inc: { quantityInStock: item.quantity } }
+      )
+    )
+  );
 }
 
 const router = express.Router();
@@ -36,19 +106,13 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const { items, shippingAddress, paymentTransactionId } = req.body;
 
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Your cart is empty.' });
+    const normalizedItems = normalizeOrderItems(items);
+    if (!normalizedItems.ok) {
+      return res.status(normalizedItems.status).json({ error: normalizedItems.error });
     }
 
     if (!shippingAddress || typeof shippingAddress !== 'object') {
       return res.status(400).json({ error: 'Please enter a shipping address.' });
-    }
-
-    const payment = consumeTransaction(paymentTransactionId, {
-      userId: req.user.id.toString(),
-    });
-    if (!payment.ok) {
-      return res.status(402).json({ error: payment.error });
     }
 
     const cleanShippingAddress = {};
@@ -60,18 +124,7 @@ router.post('/', authenticate, async (req, res) => {
       cleanShippingAddress[field] = value.trim();
     }
 
-    const itemProductIds = items.map((item) => item.id || item.productId).filter(Boolean);
-    if (itemProductIds.length !== items.length) {
-      return res.status(400).json({ error: 'One or more cart items are missing product information.' });
-    }
-
-    for (const item of items) {
-      if (!Number.isInteger(item.quantity) || item.quantity < 1) {
-        return res.status(400).json({ error: 'Cart item quantities must be at least 1.' });
-      }
-    }
-
-    const productIds = [...new Set(itemProductIds.map((id) => id.toString()))];
+    const productIds = normalizedItems.items.map((item) => item.productId);
     const products = await Product.find({ _id: { $in: productIds } });
 
     if (products.length !== productIds.length) {
@@ -80,18 +133,19 @@ router.post('/', authenticate, async (req, res) => {
 
     const productMap = Object.fromEntries(products.map((p) => [p._id.toString(), p]));
 
-    for (const item of items) {
-      const id = (item.id || item.productId).toString();
-      const product = productMap[id];
+    for (const item of normalizedItems.items) {
+      const product = productMap[item.productId];
       const availableStock = getAvailableStock(product);
-      if (availableStock != null && availableStock < item.quantity) {
+      if (availableStock <= 0) {
+        return res.status(409).json({ error: `${product.name} is out of stock.` });
+      }
+      if (availableStock < item.quantity) {
         return res.status(409).json({ error: `Not enough stock for ${product.name}.` });
       }
     }
 
-    const orderItems = items.map((item) => {
-      const id = (item.id || item.productId).toString();
-      const product = productMap[id];
+    const orderItems = normalizedItems.items.map((item) => {
+      const product = productMap[item.productId];
       return {
         productId: product._id,
         name: product.name,
@@ -103,27 +157,44 @@ router.post('/', authenticate, async (req, res) => {
 
     const totalPrice = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
-    const order = await Order.create({
-      userId: req.user.id.toString(),
-      items: orderItems,
-      totalPrice,
-      shippingAddress: cleanShippingAddress,
-      status: 'Processing',
-      paymentTransactionId,
-      paymentStatus: 'approved',
-      paymentCardLast4: payment.record.cardLast4 || '',
-      paidAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
-    });
-
-    for (const item of items) {
-      const id = (item.id || item.productId).toString();
-      const product = productMap[id];
-      if (product.quantityInStock != null) {
-        await Product.findByIdAndUpdate(product._id, { $inc: { quantityInStock: -item.quantity } });
-      } else if (product.stock != null) {
-        await Product.findByIdAndUpdate(product._id, { $inc: { stock: -item.quantity } });
-      }
+    const reservation = await reserveStock(orderItems);
+    if (!reservation.ok) {
+      return res.status(409).json({ error: reservation.error });
     }
+
+    const payment = consumeTransaction(paymentTransactionId, {
+      userId: req.user.id.toString(),
+    });
+    if (!payment.ok) {
+      await releaseStock(reservation.reserved);
+      return res.status(402).json({ error: payment.error });
+    }
+
+    let order;
+    try {
+      order = await Order.create({
+        userId: req.user.id.toString(),
+        items: orderItems,
+        totalPrice,
+        shippingAddress: cleanShippingAddress,
+        status: 'processing',
+        forwardedToDeliveryAt: new Date(),
+        paymentTransactionId,
+        paymentStatus: 'approved',
+        paymentCardLast4: payment.record.cardLast4 || '',
+        paidAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
+      });
+    } catch (err) {
+      await releaseStock(reservation.reserved);
+      throw err;
+    }
+
+    await Cart.updateOne(
+      { userId: req.user.id.toString() },
+      { $set: { items: [] } }
+    ).catch((err) => {
+      console.warn('Could not clear cart after order', order._id, ':', err.message);
+    });
 
     // Async Invoice Generation & Email Sending
     (async () => {
@@ -131,16 +202,34 @@ router.post('/', authenticate, async (req, res) => {
         const user = await User.findById(req.user.id);
         if (!isEmailConfigured()) {
           console.warn('Invoice email skipped because SMTP environment variables are not configured.');
+          await Order.findByIdAndUpdate(order._id, {
+            invoiceEmailStatus: 'skipped',
+            invoiceEmailError: 'Email service is not configured.',
+          });
           return;
         }
 
         if (user && user.email) {
           const pdfBuffer = await generateInvoicePdf(order);
           await sendInvoiceEmail(user.email, order, pdfBuffer);
+          await Order.findByIdAndUpdate(order._id, {
+            invoiceEmailStatus: 'sent',
+            invoiceEmailedAt: new Date(),
+            invoiceEmailError: '',
+          });
           console.log(`Invoice sent successfully to ${user.email} for order ${order._id}`);
+        } else {
+          await Order.findByIdAndUpdate(order._id, {
+            invoiceEmailStatus: 'skipped',
+            invoiceEmailError: 'User email address is missing.',
+          });
         }
       } catch (err) {
         console.error('Error in async invoice generation/email sending for order', order._id, ':', err.message);
+        await Order.findByIdAndUpdate(order._id, {
+          invoiceEmailStatus: 'failed',
+          invoiceEmailError: err.message.slice(0, 500),
+        }).catch(() => {});
       }
     })();
 
@@ -155,8 +244,8 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 router.patch('/:id/status', authenticate, requireRole('product_manager'), async (req, res) => {
-  const { status } = req.body;
-  if (!ORDER_STATUSES.includes(status)) {
+  const status = normalizeOrderStatus(req.body?.status);
+  if (!status) {
     return res.status(400).json({ error: `Invalid status. Must be one of: ${ORDER_STATUSES.join(', ')}` });
   }
   try {
@@ -206,8 +295,17 @@ router.post('/:id/invoice/resend', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'No email address on file for this account.' });
     }
 
+    if (!isEmailConfigured()) {
+      return res.status(503).json({ error: 'Email service is not configured.' });
+    }
+
     const pdfBuffer = await generateInvoicePdf(order);
     await sendInvoiceEmail(user.email, order, pdfBuffer);
+    await Order.findByIdAndUpdate(order._id, {
+      invoiceEmailStatus: 'sent',
+      invoiceEmailedAt: new Date(),
+      invoiceEmailError: '',
+    });
 
     res.json({ message: 'Invoice sent.', email: user.email });
   } catch (err) {

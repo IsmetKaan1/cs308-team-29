@@ -27,12 +27,14 @@ const productSchema = new Schema({
   distributorInfo: { type: String, required: true, trim: true, minlength: 1 },
   model: { type: String, required: true, trim: true, minlength: 1 },
   quantityInStock: { type: Number, required: true, min: 0 },
+  cartAddCount: { type: Number, default: 0, min: 0, index: true },
   createdAt: { type: Date, default: Date.now },
 });
 
 productSchema.set('toJSON', {
   transform: (doc, ret) => {
     ret.id = ret._id;
+    ret.warrantyStatus = ret.warrantyMonths > 0 ? 'under-warranty' : 'no-warranty';
     delete ret._id;
     delete ret.__v;
   }

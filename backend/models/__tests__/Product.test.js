@@ -101,11 +101,17 @@ describe('Product schema', () => {
     expect(json._id).toBeUndefined();
     expect(json.__v).toBeUndefined();
     expect(json.serialNumber).toBe('SN-TEST-0001');
+    expect(json.warrantyStatus).toBe('under-warranty');
   });
 
   test('accepts zero as a valid quantityInStock', () => {
     const p = new Product(baseProductData({ quantityInStock: 0 }));
     expect(p.validateSync()).toBeUndefined();
+  });
+
+  test('defaults cartAddCount to zero', () => {
+    const p = new Product(baseProductData());
+    expect(p.cartAddCount).toBe(0);
   });
 
   test('rejects missing category', () => {

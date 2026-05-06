@@ -5,7 +5,20 @@ import AppHeader from '../components/AppHeader';
 import OrderStepper from '../components/OrderStepper';
 import Spinner from '../components/Spinner';
 
-const STATUSES = ['Processing', 'In Transit', 'Delivered'];
+const STATUSES = [
+  { value: 'processing', label: 'Processing' },
+  { value: 'in-transit', label: 'In Transit' },
+  { value: 'delivered', label: 'Delivered' },
+];
+const STATUS_ALIASES = {
+  Processing: 'processing',
+  'In Transit': 'in-transit',
+  Delivered: 'delivered',
+};
+
+function normalizeOrderStatus(status) {
+  return STATUS_ALIASES[status] || status;
+}
 
 export default function OrdersPage() {
   const navigate = useNavigate();
@@ -26,7 +39,7 @@ export default function OrdersPage() {
         setOrders(ordersData);
         setCurrentUser(userData);
         setSelectedStatuses(
-          Object.fromEntries(ordersData.map((order) => [order.id, order.status]))
+          Object.fromEntries(ordersData.map((order) => [order.id, normalizeOrderStatus(order.status)]))
         );
         localStorage.setItem('user', JSON.stringify(userData));
       })
@@ -133,13 +146,13 @@ export default function OrdersPage() {
                   <div className="order-update-row">
                     <select
                       className="form-select"
-                      value={selectedStatuses[order.id] || order.status}
+                      value={selectedStatuses[order.id] || normalizeOrderStatus(order.status)}
                       onChange={(e) =>
                         setSelectedStatuses((prev) => ({ ...prev, [order.id]: e.target.value }))
                       }
                     >
                       {STATUSES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                        <option key={s.value} value={s.value}>{s.label}</option>
                       ))}
                     </select>
                     <button

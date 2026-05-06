@@ -171,8 +171,7 @@ const ProductReviews = ({ productId, initialAverage = 0, initialCount = 0 }) => 
                 style={{ resize: 'vertical', minHeight: 96 }}
               />
               <div style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-500)', marginTop: 4 }}>
-                Yorumlar ürün yöneticisi tarafından onaylandıktan sonra yayınlanır. Sadece puan
-                verirsen onayı beklemene gerek kalmaz.
+                Değerlendirmeler ürün yöneticisi tarafından onaylandıktan sonra yayınlanır.
               </div>
             </div>
 

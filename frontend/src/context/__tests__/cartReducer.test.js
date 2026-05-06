@@ -46,6 +46,27 @@ describe('cartReducer', () => {
     expect(s2.totalPrice).toBe(200);
   });
 
+  test('ADD_ITEM ignores out-of-stock products', () => {
+    const next = cartReducer(initialCartState, {
+      type: 'ADD_ITEM',
+      product: prod({ quantityInStock: 0 }),
+    });
+    expect(next.items).toHaveLength(0);
+  });
+
+  test('ADD_ITEM and INCREMENT do not exceed visible stock', () => {
+    const s1 = cartReducer(initialCartState, {
+      type: 'ADD_ITEM',
+      product: prod({ quantityInStock: 1 }),
+    });
+    const s2 = cartReducer(s1, {
+      type: 'ADD_ITEM',
+      product: prod({ quantityInStock: 1 }),
+    });
+    const s3 = cartReducer(s2, { type: 'INCREMENT', id: 'p1' });
+    expect(s3.items[0].quantity).toBe(1);
+  });
+
   test('REMOVE_ITEM removes a specific item by id', () => {
     const seeded = {
       ...initialCartState,
@@ -131,5 +152,14 @@ describe('cartReducer', () => {
     expect(next.items).toHaveLength(1);
     expect(next.totalItems).toBe(4);
     expect(next.totalPrice).toBe(80);
+  });
+
+  test('SET_CART removes impossible out-of-stock items', () => {
+    const next = cartReducer(initialCartState, {
+      type: 'SET_CART',
+      items: [{ id: 'x', price: 20, quantity: 4, quantityInStock: 0 }],
+    });
+    expect(next.items).toHaveLength(0);
+    expect(next.totalItems).toBe(0);
   });
 });

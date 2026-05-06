@@ -5,6 +5,7 @@ const Product = require('../models/Product');
 const User = require('../models/User');
 const authenticate = require('../middleware/auth');
 const managerPass = require('../middleware/managerPass');
+const requireRole = require('../middleware/roleGuard');
 const {
   validateRating,
   sanitizeComment,
@@ -57,7 +58,7 @@ productReviewsRouter.post('/', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'Invalid product id.' });
   }
 
-  const ratingResult = validateRating(Number(req.body?.rating));
+  const ratingResult = validateRating(req.body?.rating);
   if (!ratingResult.ok) {
     return res.status(400).json({ error: ratingResult.error });
   }
@@ -77,16 +78,24 @@ productReviewsRouter.post('/', authenticate, async (req, res) => {
     if (!product) return res.status(404).json({ error: 'Product not found.' });
     if (!user)    return res.status(404).json({ error: 'User not found.' });
 
-    const userName = user.fullName || user.username || 'Anonymous';
+    const userName = user.full_name || user.fullName || user.username || 'Anonymous';
 
     if (existing) {
-      const nextStatus = statusForUpdatedReview({ existing, newComment: comment });
+      const nextStatus = statusForUpdatedReview({
+        existing,
+        newComment: comment,
+        newRating: ratingResult.rating,
+      });
+      const previousStatus = existing.status;
       existing.rating = ratingResult.rating;
       existing.comment = comment;
       existing.userName = userName;
       existing.status = nextStatus;
       if (nextStatus !== 'rejected') existing.rejectionReason = '';
-      if (nextStatus !== existing.status) existing.moderatedAt = null;
+      if (nextStatus !== previousStatus) {
+        existing.moderatedAt = null;
+        existing.moderatedBy = null;
+      }
       await existing.save();
       return res.json(formatReview(existing.toObject()));
     }
@@ -99,7 +108,7 @@ productReviewsRouter.post('/', authenticate, async (req, res) => {
       rating: ratingResult.rating,
       comment,
       status,
-      moderatedAt: status === 'approved' ? new Date() : null,
+      moderatedAt: null,
     });
     res.status(201).json(formatReview(created.toObject()));
   } catch (err) {
@@ -114,10 +123,21 @@ productReviewsRouter.post('/', authenticate, async (req, res) => {
   }
 });
 
-// Manager: list pending reviews across all products.
-reviewsRouter.get('/pending', managerPass, async (req, res) => {
+const managerModeration = [authenticate, requireRole('product_manager'), managerPass];
+
+// Manager: list reviews awaiting action across all products.
+reviewsRouter.get('/pending', managerModeration, async (req, res) => {
+  return listModerationQueue(req, res, 'pending');
+});
+
+// Manager: list rejected reviews so a rejection can be cancelled/reopened.
+reviewsRouter.get('/rejected', managerModeration, async (req, res) => {
+  return listModerationQueue(req, res, 'rejected');
+});
+
+async function listModerationQueue(req, res, status) {
   try {
-    const reviews = await Review.find({ status: 'pending' })
+    const reviews = await Review.find({ status })
       .sort({ createdAt: 1 })
       .lean();
     const productIds = [...new Set(reviews.map((r) => String(r.productId)))];
@@ -132,13 +152,13 @@ reviewsRouter.get('/pending', managerPass, async (req, res) => {
       }))
     );
   } catch (err) {
-    console.error('Failed to load pending reviews:', err);
+    console.error(`Failed to load ${status} reviews:`, err);
     res.status(500).json({ error: 'Server error' });
   }
-});
+}
 
-// Manager: approve or reject a review.
-reviewsRouter.patch('/:id/moderate', managerPass, async (req, res) => {
+// Manager: approve, reject, or reopen a review.
+reviewsRouter.patch('/:id/moderate', managerModeration, async (req, res) => {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) {
     return res.status(400).json({ error: 'Invalid review id.' });
@@ -151,7 +171,14 @@ reviewsRouter.patch('/:id/moderate', managerPass, async (req, res) => {
   if (!decision.ok) return res.status(400).json({ error: decision.error });
 
   try {
-    const review = await Review.findByIdAndUpdate(id, decision.patch, { new: true });
+    const patch = {
+      ...decision.patch,
+      moderatedBy: decision.patch.status === 'pending' ? null : req.user.id,
+    };
+    const review = await Review.findByIdAndUpdate(id, patch, {
+      new: true,
+      runValidators: true,
+    });
     if (!review) return res.status(404).json({ error: 'Review not found.' });
     res.json(formatReview(review.toObject()));
   } catch (err) {

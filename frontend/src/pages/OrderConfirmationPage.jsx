@@ -137,7 +137,7 @@ export default function OrderConfirmationPage() {
               <div className="invoice-viewer-header">
                 <div className="invoice-viewer-title">
                   <strong>Sipariş Faturası</strong>
-                  <span>PDF kopyası e-posta adresine de gönderildi.</span>
+                  <span>PDF faturayı burada görüntüleyebilirsin; e-posta gönderimi arka planda işlenir.</span>
                 </div>
                 <div className="invoice-viewer-actions">
                   <button
@@ -170,9 +170,7 @@ export default function OrderConfirmationPage() {
                 <div className="invoice-viewer-placeholder" role="alert">
                   <strong>Fatura yüklenemedi</strong>
                   <span>{invoiceError}</span>
-                  <span style={{ fontSize: 'var(--fs-12)' }}>
-                    PDF kopyası yine de e-posta adresine gönderildi.
-                  </span>
+                  <span style={{ fontSize: 'var(--fs-12)' }}>Dilersen siparişlerim sayfasından tekrar deneyebilirsin.</span>
                 </div>
               )}
 

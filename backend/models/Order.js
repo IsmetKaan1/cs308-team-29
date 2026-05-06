@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const ORDER_STATUSES = ['processing', 'in-transit', 'delivered'];
+
 const orderItemSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   name: { type: String, required: true },
@@ -23,9 +25,17 @@ const orderSchema = new mongoose.Schema({
   shippingAddress: { type: shippingAddressSchema, required: true },
   status: {
     type: String,
-    enum: ['Processing', 'In Transit', 'Delivered'],
-    default: 'Processing',
+    enum: ORDER_STATUSES,
+    default: 'processing',
   },
+  forwardedToDeliveryAt: { type: Date, default: Date.now },
+  invoiceEmailStatus: {
+    type: String,
+    enum: ['pending', 'sent', 'failed', 'skipped'],
+    default: 'pending',
+  },
+  invoiceEmailError: { type: String, default: '' },
+  invoiceEmailedAt: { type: Date, default: null },
   paymentTransactionId: { type: String, required: true },
   paymentStatus: {
     type: String,
@@ -45,4 +55,8 @@ orderSchema.set('toJSON', {
   },
 });
 
-module.exports = mongoose.model('Order', orderSchema);
+const Order = mongoose.model('Order', orderSchema);
+Order.STATUSES = ORDER_STATUSES;
+
+module.exports = Order;
+module.exports.STATUSES = ORDER_STATUSES;

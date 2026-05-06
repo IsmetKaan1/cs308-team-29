@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Product = require('./models/Product');
+const Order = require('./models/Order');
 
 const connectDB = async () => {
   try {
@@ -61,6 +62,21 @@ const connectDB = async () => {
         return Product.updateOne({ _id: doc._id }, { $set: patch });
       }));
     }
+
+    await Product.updateMany(
+      { cartAddCount: { $in: [null, undefined] } },
+      { $set: { cartAddCount: 0 } }
+    );
+
+    await Promise.all([
+      Order.updateMany({ status: 'Processing' }, { $set: { status: 'processing' } }),
+      Order.updateMany({ status: 'In Transit' }, { $set: { status: 'in-transit' } }),
+      Order.updateMany({ status: 'Delivered' }, { $set: { status: 'delivered' } }),
+      Order.updateMany(
+        { forwardedToDeliveryAt: { $in: [null, undefined] } },
+        { $set: { forwardedToDeliveryAt: new Date() } }
+      ),
+    ]);
   } catch (error) {
     console.error('MongoDB connection failed — check MONGODB_URI. Details:', error.message);
     process.exit(1);

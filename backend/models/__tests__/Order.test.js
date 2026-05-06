@@ -35,7 +35,7 @@ describe('Order Model', () => {
     expect(error).toBeUndefined();
   });
 
-  it('should default status to Processing', () => {
+  it('should default status to processing', () => {
     const order = new Order({
       userId: 'user-123',
       items: [],
@@ -43,7 +43,7 @@ describe('Order Model', () => {
       shippingAddress: { fullName: 'a', address: 'b', city: 'c', postalCode: 'd', country: 'e' },
       paymentTransactionId: 'txn-123'
     });
-    expect(order.status).toBe('Processing');
+    expect(order.status).toBe('processing');
   });
 
   it('should only allow valid statuses', () => {
@@ -57,6 +57,20 @@ describe('Order Model', () => {
     });
     const error = order.validateSync();
     expect(error.errors.status).toBeDefined();
+  });
+
+  it('should allow canonical delivery statuses', () => {
+    for (const status of ['processing', 'in-transit', 'delivered']) {
+      const order = new Order({
+        userId: 'user-123',
+        items: [],
+        totalPrice: 0,
+        shippingAddress: { fullName: 'a', address: 'b', city: 'c', postalCode: 'd', country: 'e' },
+        paymentTransactionId: `txn-${status}`,
+        status,
+      });
+      expect(order.validateSync()).toBeUndefined();
+    }
   });
 
   it('should have approved as default paymentStatus', () => {

@@ -2,16 +2,15 @@
  * Pure logic for review status transitions. No DB, no I/O, no state.
  *
  * Rules:
- * - A rating without a comment is auto-approved (no moderator needed).
- * - A rating with a comment starts as 'pending' and must be moderated.
+ * - New reviews always start as 'pending' and must be moderated before
+ *   becoming public, whether they contain only a rating or also a comment.
  * - When a user updates their existing review:
- *     * If the comment text changes (including going empty), the review
- *       must be re-approved — status resets to 'pending' (unless the new
- *       state is comment-less, in which case 'approved').
- *     * If only the rating changes, keep the existing status.
+ *     * Any content/rating change resets the review to 'pending'.
+ * - A rejected review can be restored with the 'reopen' action. This is the
+ *   "cancel rejection" path: rejected -> pending, never delete/disappear.
  */
 
-const VALID_ACTIONS = ['approve', 'reject'];
+const VALID_ACTIONS = ['approve', 'reject', 'reopen'];
 
 function sanitizeComment(raw) {
   if (typeof raw !== 'string') return '';
@@ -25,15 +24,19 @@ function validateRating(value) {
   return { ok: true, rating: value };
 }
 
-function statusForNewReview({ comment }) {
-  return sanitizeComment(comment) ? 'pending' : 'approved';
+function statusForNewReview() {
+  return 'pending';
 }
 
-function statusForUpdatedReview({ existing, newComment }) {
-  const next = sanitizeComment(newComment);
-  const prev = sanitizeComment(existing?.comment);
-  if (next === prev) return existing?.status || (next ? 'pending' : 'approved');
-  return next ? 'pending' : 'approved';
+function statusForUpdatedReview({ existing, newComment, newRating }) {
+  const nextComment = sanitizeComment(newComment);
+  const prevComment = sanitizeComment(existing?.comment);
+  const nextRating = Number(newRating);
+  const prevRating = Number(existing?.rating);
+  if (nextComment === prevComment && nextRating === prevRating) {
+    return existing?.status || 'pending';
+  }
+  return 'pending';
 }
 
 function applyModeration({ action, rejectionReason }) {
@@ -46,6 +49,16 @@ function applyModeration({ action, rejectionReason }) {
       patch: {
         status: 'approved',
         moderatedAt: new Date(),
+        rejectionReason: '',
+      },
+    };
+  }
+  if (action === 'reopen') {
+    return {
+      ok: true,
+      patch: {
+        status: 'pending',
+        moderatedAt: null,
         rejectionReason: '',
       },
     };

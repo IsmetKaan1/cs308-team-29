@@ -39,6 +39,11 @@ const CartSidebar = () => {
                 <div className="cart-item-info">
                   <span className="cart-item-code">{item.code}</span>
                   <span className="cart-item-name">{item.name}</span>
+                  {(item.quantityInStock ?? item.stock) != null && (
+                    <span className="cart-item-code">
+                      Stok: {item.quantityInStock ?? item.stock}
+                    </span>
+                  )}
                   <span className="cart-item-price">{(item.price * item.quantity).toFixed(2)} ₺</span>
                 </div>
                 <div className="cart-item-controls">
@@ -52,6 +57,7 @@ const CartSidebar = () => {
                   <button
                     className="cart-qty-btn"
                     onClick={() => dispatch({ type: 'INCREMENT', id: item.id })}
+                    disabled={(item.quantityInStock ?? item.stock) != null && item.quantity >= (item.quantityInStock ?? item.stock)}
                   >
                     +
                   </button>
