@@ -16,6 +16,19 @@ cp .env.example .env
 
 `.env` dosyasını açıp gerçek değerleri gir (takım arkadaşlarından al).
 
+Fatura e-postaları için `.env` içinde SMTP bilgileri de olmalı:
+
+```bash
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password
+EMAIL_FROM="CS308 Store" <your-email@gmail.com>
+```
+
+Gmail kullanıyorsan normal hesap şifresi yerine uygulama şifresi kullanman gerekir. Test için Mailtrap/Ethereal gibi bir SMTP hesabı da kullanabilirsin.
+
 ---
 
 ### Çalıştırma

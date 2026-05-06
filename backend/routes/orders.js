@@ -5,7 +5,7 @@ const User = require('../models/User');
 const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
 const { generateInvoicePdf } = require('../services/pdfService');
-const { sendInvoiceEmail } = require('../services/emailService');
+const { sendInvoiceEmail, isEmailConfigured } = require('../services/emailService');
 const { consumeTransaction } = require('../lib/paymentStore');
 
 const ORDER_STATUSES = ['Processing', 'In Transit', 'Delivered'];
@@ -129,6 +129,11 @@ router.post('/', authenticate, async (req, res) => {
     (async () => {
       try {
         const user = await User.findById(req.user.id);
+        if (!isEmailConfigured()) {
+          console.warn('Invoice email skipped because SMTP environment variables are not configured.');
+          return;
+        }
+
         if (user && user.email) {
           const pdfBuffer = await generateInvoicePdf(order);
           await sendInvoiceEmail(user.email, order, pdfBuffer);

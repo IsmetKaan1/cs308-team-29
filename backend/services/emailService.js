@@ -1,19 +1,51 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-email-password',
-  },
-});
+let transporter;
+
+function getEmailConfig() {
+  const host = process.env.EMAIL_HOST;
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  const port = Number(process.env.EMAIL_PORT || 587);
+  return {
+    host,
+    port,
+    secure: String(process.env.EMAIL_SECURE || '').toLowerCase() === 'true' || port === 465,
+    auth: { user, pass },
+  };
+}
+
+function getTransporter() {
+  const config = getEmailConfig();
+  if (!config) {
+    return null;
+  }
+
+  if (!transporter) {
+    transporter = nodemailer.createTransport(config);
+  }
+
+  return transporter;
+}
+
+function isEmailConfigured() {
+  return Boolean(getEmailConfig());
+}
 
 async function sendInvoiceEmail(toEmail, order, pdfBuffer) {
   try {
+    const mailTransporter = getTransporter();
+    if (!mailTransporter) {
+      throw new Error('Email service is not configured. Set EMAIL_HOST, EMAIL_USER, and EMAIL_PASS.');
+    }
+
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Your Store" <noreply@yourstore.com>',
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: toEmail,
       subject: `Your Invoice for Order #${order._id}`,
       text: `Hello,\n\nThank you for your order. Please find your invoice attached as a PDF.\n\nBest regards,\nYour Store`,
@@ -26,13 +58,12 @@ async function sendInvoiceEmail(toEmail, order, pdfBuffer) {
       ],
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await mailTransporter.sendMail(mailOptions);
     return info;
   } catch (error) {
-    // We log the error but don't throw to prevent breaking the main flow
     console.error('Email sending failed for order', order._id, ':', error);
     throw error;
   }
 }
 
-module.exports = { sendInvoiceEmail };
+module.exports = { sendInvoiceEmail, isEmailConfigured };
