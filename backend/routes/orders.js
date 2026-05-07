@@ -102,6 +102,23 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+router.get('/', authenticate, requireRole('product_manager'), async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.status) {
+      const normalized = normalizeOrderStatus(req.query.status);
+      if (!normalized) {
+        return res.status(400).json({ error: `Invalid status. Must be one of: ${ORDER_STATUSES.join(', ')}` });
+      }
+      filter.status = normalized;
+    }
+    const orders = await Order.find(filter).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.post('/', authenticate, async (req, res) => {
   try {
     const { items, shippingAddress, paymentTransactionId } = req.body;

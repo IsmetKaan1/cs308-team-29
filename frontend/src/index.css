@@ -1093,12 +1093,12 @@ input, select, textarea {
 }
 
 .category-tab {
-  padding: 8px 16px;
+  padding: 10px 18px;
   border-radius: var(--radius-pill);
   border: 1.5px solid var(--color-ink-200);
   background: var(--color-white);
   color: var(--color-ink-700);
-  font-size: var(--fs-13);
+  font-size: var(--fs-14);
   font-weight: var(--fw-medium);
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease),
@@ -1134,6 +1134,25 @@ input, select, textarea {
 .category-tab[aria-pressed='true'] .category-tab-count {
   background: rgba(255, 255, 255, 0.24);
   color: var(--color-white);
+}
+
+.manager-subnav {
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-ink-200);
+  box-shadow: var(--shadow-xs);
+  position: sticky;
+  top: 64px;
+  z-index: 40;
+}
+.manager-subnav-inner {
+  max-width: var(--container-lg);
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
 }
 
 .product-card-tags {

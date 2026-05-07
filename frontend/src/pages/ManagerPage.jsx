@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import Spinner from '../components/Spinner';
 import Stars from '../components/Stars';
-import StockPanel from '../components/StockPanel'; 
-
-const STORAGE_KEY = 'managerPass';
+import StockPanel from '../components/StockPanel';
+import ShipmentsPanel from '../components/ShipmentsPanel';
+import AppHeader from '../components/AppHeader';
 
 function formatDate(value) {
   try {
@@ -17,121 +17,51 @@ function formatDate(value) {
   }
 }
 
-// YÖNETİCİ GİRİŞ EKRANI
-function ManagerGate({ onAuthed }) {
-  const navigate = useNavigate();
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const hasToken = !!localStorage.getItem('token');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!localStorage.getItem('token')) {
-      setError('Önce product manager hesabıyla normal giriş yapmalısın. 1234 sadece ikinci manager şifresi.');
-      return;
-    }
-
-    setBusy(true);
-    try {
-      await api.managerGet('/api/reviews/pending', password);
-      sessionStorage.setItem(STORAGE_KEY, password);
-      onAuthed(password);
-    } catch (err) {
-      if (/No token provided|Invalid token/i.test(err.message || '')) {
-        setError('Login oturumu bulunamadı veya süresi doldu. Önce product manager hesabıyla giriş yap.');
-      } else if (/Forbidden|insufficient role/i.test(err.message || '')) {
-        setError('Bu hesap product manager değil. Product manager rolü olan bir hesapla giriş yapmalısın.');
-      } else {
-        setError(err.message || 'Incorrect password.');
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/login');
-  };
-
-  return (
-    <div className="manager-gate">
-      <form className="manager-gate-card" onSubmit={handleSubmit} noValidate>
-        <button type="button" className="auth-back" onClick={handleBack} aria-label="Go back">
-          ← Back
-        </button>
-        <h1>Manager Login</h1>
-        <p>Önce product manager hesabıyla normal giriş yap, sonra manager şifresi olarak 1234 gir.</p>
-
-        {error && <div className="error-message" role="alert">{error}</div>}
-        {!hasToken && (
-          <div className="review-status-banner review-status-banner--pending">
-            Aktif login token yok. Bu yüzden backend “No token provided” diyor.
-          </div>
-        )}
-
-        <div className="form-group">
-          <label htmlFor="manager-pass">Password</label>
-          <input
-            id="manager-pass"
-            type="password"
-            className="form-input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoFocus
-            required
-          />
-        </div>
-
-        <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy || !password}>
-          {busy ? 'Checking...' : 'Login'}
-        </button>
-        {!hasToken && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-block"
-            style={{ marginTop: 12 }}
-            onClick={() => navigate('/login')}
-          >
-            Normal Giriş Sayfasına Git
-          </button>
-        )}
-      </form>
-    </div>
-  );
+function readStoredManagerUser() {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.role === 'product_manager' ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
-// ANA YÖNETİCİ PANELİ
+// MAIN MANAGER PANEL — only accessible to users with the product_manager role.
+// Redirect to /login if not authenticated or role does not match.
 export default function ManagerPage() {
   const navigate = useNavigate();
-  const [pass, setPass] = useState(() => sessionStorage.getItem(STORAGE_KEY) || '');
-  const [authed, setAuthed] = useState(!!sessionStorage.getItem(STORAGE_KEY));
-  
- 
-  const [activeTab, setActiveTab] = useState('pending'); 
+  const [authedUser, setAuthedUser] = useState(() => readStoredManagerUser());
+  const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('token');
+  const authed = !!authedUser;
 
-  // Yorumlar için olan eski state'lerin
+  const [activeTab, setActiveTab] = useState('pending');
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [busyIds, setBusyIds] = useState({});
   const [feedback, setFeedback] = useState({});
 
-  const loadQueue = async (managerPass) => {
+  useEffect(() => {
+    if (!hasToken || !authed) {
+      navigate('/login', { replace: true });
+    }
+  }, [hasToken, authed, navigate]);
+
+  const loadQueue = async () => {
     setLoading(true);
     setError('');
     try {
       const endpoint = activeTab === 'rejected' ? '/api/reviews/rejected' : '/api/reviews/pending';
-      const list = await api.managerGet(endpoint, managerPass);
+      const list = await api.get(endpoint);
       setQueue(list);
     } catch (err) {
       setError(err.message || 'Failed to load reviews.');
-      if (err.message && /Manager authentication/i.test(err.message)) {
-        sessionStorage.removeItem(STORAGE_KEY);
-        setAuthed(false);
+      if (err.message && /No token provided|Invalid token|Forbidden|insufficient role/i.test(err.message)) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setAuthedUser(null);
       }
     } finally {
       setLoading(false);
@@ -139,24 +69,15 @@ export default function ManagerPage() {
   };
 
   useEffect(() => {
- 
-    if (authed && pass && (activeTab === 'pending' || activeTab === 'rejected')) loadQueue(pass);
-  }, [authed, pass, activeTab]);
-
-  const handleAuthed = (newPass) => {
-    setPass(newPass);
-    setAuthed(true);
-  };
+    if (authed && (activeTab === 'pending' || activeTab === 'rejected')) loadQueue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, activeTab]);
 
   const handleModerate = async (reviewId, action) => {
-    let rejectionReason = '';
-    if (action === 'reject') {
-      rejectionReason = window.prompt('Reason for rejection (optional):') || '';
-    }
     setBusyIds((s) => ({ ...s, [reviewId]: true }));
     setFeedback((s) => ({ ...s, [reviewId]: null }));
     try {
-      await api.managerPatch(`/api/reviews/${reviewId}/moderate`, { action, rejectionReason }, pass);
+      await api.patch(`/api/reviews/${reviewId}/moderate`, { action });
       setQueue((list) => list.filter((r) => r.id !== reviewId));
       const labels = { approve: 'Approved.', reject: 'Rejected.', reopen: 'Restored to pending.' };
       setFeedback((s) => ({ ...s, [reviewId]: { type: 'ok', text: labels[action] || 'Updated.' } }));
@@ -167,62 +88,65 @@ export default function ManagerPage() {
     }
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem(STORAGE_KEY);
-    setPass('');
-    setAuthed(false);
-    setQueue([]);
-  };
-
-  if (!authed) {
-    return <ManagerGate onAuthed={handleAuthed} />;
-  }
+  if (!authed) return null;
 
   return (
     <div className="page">
-      <header className="app-header">
-        <div className="app-header-inner">
-          <button className="app-brand" onClick={() => navigate('/')} aria-label="Home page">
-            <span className="app-brand-mark">CS</span>
-            <span className="app-brand-title">
-              Manager Panel
-            </span>
-          </button>
-          <nav className="app-nav">
+      <AppHeader />
 
-            <button 
-              className={`btn ${activeTab === 'pending' ? 'btn-primary' : 'btn-ghost-light'} btn-sm`} 
+      <div className="manager-subnav">
+        <div className="manager-subnav-inner">
+          <div className="category-tabs" role="tablist" aria-label="Manager tabs" style={{ marginBottom: 0 }}>
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'pending'}
               onClick={() => setActiveTab('pending')}
             >
               Pending Reviews
             </button>
-            <button 
-              className={`btn ${activeTab === 'rejected' ? 'btn-primary' : 'btn-ghost-light'} btn-sm`} 
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'rejected'}
               onClick={() => setActiveTab('rejected')}
             >
               Rejected Reviews
             </button>
-            <button 
-              className={`btn ${activeTab === 'stock' ? 'btn-primary' : 'btn-ghost-light'} btn-sm`} 
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'stock'}
               onClick={() => setActiveTab('stock')}
             >
               Stock Management
             </button>
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'shipments'}
+              onClick={() => setActiveTab('shipments')}
+            >
+              Kargo
+            </button>
+          </div>
 
-            {(activeTab === 'pending' || activeTab === 'rejected') && (
-              <button className="btn btn-ghost-light btn-sm" onClick={() => loadQueue(pass)} disabled={loading}>
+          {(activeTab === 'pending' || activeTab === 'rejected') && (
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button className="category-tab" onClick={loadQueue} disabled={loading}>
                 Refresh
               </button>
-            )}
-            <button className="btn btn-ghost-light btn-sm" onClick={handleLogout}>
-              Logout
-            </button>
-          </nav>
+            </div>
+          )}
         </div>
-      </header>
+      </div>
 
       <main className="page-body">
-        
+
         {(activeTab === 'pending' || activeTab === 'rejected') && (
           <>
             <div className="container-md" style={{ marginBottom: 'var(--space-5)' }}>
@@ -254,7 +178,8 @@ export default function ManagerPage() {
             )}
 
             {!loading && queue.length > 0 && (
-              <div className="moderation-list">
+              <div className="container-md">
+                <div className="moderation-list">
                 {queue.map((r) => (
                   <article key={r.id} className="moderation-card">
                     <div className="moderation-card-head">
@@ -283,7 +208,7 @@ export default function ManagerPage() {
                         <>
                           <button
                             type="button"
-                            className="btn btn-primary btn-sm"
+                            className="btn btn-primary"
                             disabled={!!busyIds[r.id]}
                             onClick={() => handleModerate(r.id, 'approve')}
                           >
@@ -291,7 +216,7 @@ export default function ManagerPage() {
                           </button>
                           <button
                             type="button"
-                            className="btn btn-danger btn-sm"
+                            className="btn btn-danger"
                             disabled={!!busyIds[r.id]}
                             onClick={() => handleModerate(r.id, 'reject')}
                           >
@@ -301,7 +226,7 @@ export default function ManagerPage() {
                       ) : (
                         <button
                           type="button"
-                          className="btn btn-primary btn-sm"
+                          className="btn btn-primary"
                           disabled={!!busyIds[r.id]}
                           onClick={() => handleModerate(r.id, 'reopen')}
                         >
@@ -318,6 +243,7 @@ export default function ManagerPage() {
                     </div>
                   </article>
                 ))}
+                </div>
               </div>
             )}
           </>
@@ -325,7 +251,11 @@ export default function ManagerPage() {
 
 
         {activeTab === 'stock' && (
-          <StockPanel managerPass={pass} />
+          <StockPanel />
+        )}
+
+        {activeTab === 'shipments' && (
+          <ShipmentsPanel />
         )}
 
       </main>
