@@ -10,6 +10,13 @@ const PRODUCT_CATEGORIES = [
   'AI & Data Science',
 ];
 
+const DEFAULT_PACKAGE_CONTENTS = [
+  'Course videos on an encrypted USB drive',
+  'Printed course handbook',
+  'Course notes booklet',
+  'Gift mousepad',
+];
+
 const productSchema = new Schema({
   code: { type: String, required: true },
   name: { type: String, required: true },
@@ -27,6 +34,10 @@ const productSchema = new Schema({
   distributorInfo: { type: String, required: true, trim: true, minlength: 1 },
   model: { type: String, required: true, trim: true, minlength: 1 },
   quantityInStock: { type: Number, required: true, min: 0 },
+  packageContents: {
+    type: [String],
+    default: () => [...DEFAULT_PACKAGE_CONTENTS],
+  },
   cartAddCount: { type: Number, default: 0, min: 0, index: true },
   createdAt: { type: Date, default: Date.now },
 });
@@ -42,6 +53,8 @@ productSchema.set('toJSON', {
 
 const Product = mongoose.model('Product', productSchema);
 Product.CATEGORIES = PRODUCT_CATEGORIES;
+Product.DEFAULT_PACKAGE_CONTENTS = DEFAULT_PACKAGE_CONTENTS;
 
 module.exports = Product;
 module.exports.CATEGORIES = PRODUCT_CATEGORIES;
+module.exports.DEFAULT_PACKAGE_CONTENTS = DEFAULT_PACKAGE_CONTENTS;

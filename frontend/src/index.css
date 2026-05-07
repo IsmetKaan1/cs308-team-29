@@ -1289,6 +1289,21 @@ input, select, textarea {
   border-radius: var(--radius-md);
 }
 
+.detail-package-list {
+  list-style: disc inside;
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+  background: var(--color-ink-50);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-14);
+  color: var(--color-ink-700);
+  line-height: 1.7;
+}
+
+.detail-package-list li {
+  padding: 2px 0;
+}
+
 .detail-info-label {
   display: block;
   color: var(--color-ink-500);

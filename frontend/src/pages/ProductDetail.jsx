@@ -107,6 +107,19 @@ const ProductDetail = () => {
           )}
         </div>
 
+        {Array.isArray(product.packageContents) && product.packageContents.length > 0 && (
+          <>
+            <h2 style={{ fontSize: 'var(--fs-18)', marginTop: 'var(--space-6)', marginBottom: 'var(--space-3)' }}>
+              Package Contents
+            </h2>
+            <ul className="detail-package-list">
+              {product.packageContents.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
+            </ul>
+          </>
+        )}
+
         {message && <div className="success-message" style={{ marginTop: 'var(--space-4)' }}>{message}</div>}
 
         <div className="detail-actions" style={{ marginTop: 'var(--space-5)' }}>

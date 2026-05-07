@@ -68,6 +68,11 @@ const connectDB = async () => {
       { $set: { cartAddCount: 0 } }
     );
 
+    await Product.updateMany(
+      { $or: [{ packageContents: { $exists: false } }, { packageContents: { $size: 0 } }] },
+      { $set: { packageContents: Product.DEFAULT_PACKAGE_CONTENTS } }
+    );
+
     await Promise.all([
       Order.updateMany({ status: 'Processing' }, { $set: { status: 'processing' } }),
       Order.updateMany({ status: 'In Transit' }, { $set: { status: 'in-transit' } }),
