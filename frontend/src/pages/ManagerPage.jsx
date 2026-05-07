@@ -131,7 +131,7 @@ export default function ManagerPage() {
               aria-pressed={activeTab === 'shipments'}
               onClick={() => setActiveTab('shipments')}
             >
-              Kargo
+              Shipments
             </button>
           </div>
 
