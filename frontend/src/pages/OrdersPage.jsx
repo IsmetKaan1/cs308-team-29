@@ -49,7 +49,7 @@ export default function OrdersPage() {
           localStorage.removeItem('user');
           navigate('/login');
         } else {
-          setError('Siparişlerin yüklenemedi. Lütfen tekrar dene.');
+          setError('Failed to load your orders. Please try again.');
         }
       })
       .finally(() => setLoading(false));
@@ -57,7 +57,7 @@ export default function OrdersPage() {
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (currentUser?.role !== 'product_manager') {
-      setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: 'Sipariş durumunu güncelleme yetkin yok.' } }));
+      setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: 'You are not authorized to update the order status.' } }));
       return;
     }
 
@@ -67,7 +67,7 @@ export default function OrdersPage() {
       const updated = await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)));
       setSelectedStatuses((prev) => ({ ...prev, [orderId]: updated.status }));
-      setFeedback((f) => ({ ...f, [orderId]: { type: 'ok', text: 'Durum güncellendi.' } }));
+      setFeedback((f) => ({ ...f, [orderId]: { type: 'ok', text: 'Status updated.' } }));
     } catch (err) {
       setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: err.message } }));
     } finally {
@@ -83,12 +83,12 @@ export default function OrdersPage() {
       <main className="page-body">
         <div className="container-md" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="page-hero">
-            <h1>Siparişlerim</h1>
-            <p>Geçmiş siparişlerini ve durumlarını buradan takip edebilirsin.</p>
+            <h1>My Orders</h1>
+            <p>Track your past orders and their statuses here.</p>
           </div>
         </div>
 
-        {loading && <Spinner label="Siparişler yükleniyor..." />}
+        {loading && <Spinner label="Loading orders..." />}
 
         {error && !loading && (
           <div className="container-md">
@@ -99,10 +99,10 @@ export default function OrdersPage() {
         {!loading && !error && orders.length === 0 && (
           <div className="container-md">
             <div className="empty-state">
-              <h2>Henüz siparişin yok</h2>
-              <p>Alışverişe başlayarak ilk siparişini oluştur.</p>
+              <h2>No orders yet</h2>
+              <p>Start shopping to place your first order.</p>
               <button className="btn btn-primary btn-lg" onClick={() => navigate('/')}>
-                Alışverişe Başla
+                Start Shopping
               </button>
             </div>
           </div>
@@ -114,9 +114,9 @@ export default function OrdersPage() {
               <article key={order.id} className="order-card">
                 <div className="order-card-header">
                   <div>
-                    <span className="order-id">Sipariş #{order.id.slice(-8).toUpperCase()}</span>
+                    <span className="order-id">Order #{order.id.slice(-8).toUpperCase()}</span>
                     <span className="order-date">
-                      {new Date(order.createdAt).toLocaleDateString('tr-TR', {
+                      {new Date(order.createdAt).toLocaleDateString('en-US', {
                         day: '2-digit', month: 'long', year: 'numeric',
                       })}
                     </span>
@@ -126,16 +126,36 @@ export default function OrdersPage() {
 
                 <div className="order-card-body">
                   <div className="order-items">
-                    {order.items.map((item, i) => (
-                      <div key={i} className="order-item-row">
-                        <span className="cart-item-code">{item.code}</span>
-                        <span className="order-item-name">{item.name}</span>
-                        <span className="order-item-qty">×{item.quantity}</span>
-                        <span className="order-item-price">
-                          {(item.price * item.quantity).toFixed(2)} ₺
-                        </span>
-                      </div>
-                    ))}
+                    {order.items.map((item, i) => {
+                      const productId = item.productId?._id || item.productId;
+                      const goToProduct = () => {
+                        if (productId) navigate(`/product/${productId}`);
+                      };
+                      return (
+                        <div
+                          key={i}
+                          className="order-item-row order-item-row--clickable"
+                          role={productId ? 'link' : undefined}
+                          tabIndex={productId ? 0 : undefined}
+                          onClick={goToProduct}
+                          onKeyDown={(e) => {
+                            if (productId && (e.key === 'Enter' || e.key === ' ')) {
+                              e.preventDefault();
+                              goToProduct();
+                            }
+                          }}
+                          style={productId ? { cursor: 'pointer' } : undefined}
+                          title={productId ? 'Go to product page' : undefined}
+                        >
+                          <span className="cart-item-code">{item.code}</span>
+                          <span className="order-item-name">{item.name}</span>
+                          <span className="order-item-qty">×{item.quantity}</span>
+                          <span className="order-item-price">
+                            {(item.price * item.quantity).toFixed(2)} ₺
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div>
                     <OrderStepper status={order.status} />
@@ -163,7 +183,7 @@ export default function OrdersPage() {
                         handleStatusUpdate(order.id, selectedStatuses[order.id] || order.status)
                       }
                     >
-                      {updating[order.id] ? 'Kaydediliyor...' : 'Durumu Güncelle'}
+                      {updating[order.id] ? 'Saving...' : 'Update Status'}
                     </button>
                     {feedback[order.id] && (
                       <span

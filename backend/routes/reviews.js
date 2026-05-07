@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const Review = require('../models/Review');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const Order = require('../models/Order');
 const authenticate = require('../middleware/auth');
-const managerPass = require('../middleware/managerPass');
 const requireRole = require('../middleware/roleGuard');
 const {
   validateRating,
@@ -18,19 +18,45 @@ const {
 const productReviewsRouter = express.Router({ mergeParams: true });
 const reviewsRouter = express.Router();
 
-// Public: list approved reviews for a product.
+// Public: list every rating for the product. The rating is always public;
+// the comment text is hidden until its moderation status is 'approved'.
 productReviewsRouter.get('/', async (req, res) => {
   const { productId } = req.params;
   if (!mongoose.isValidObjectId(productId)) {
     return res.status(400).json({ error: 'Invalid product id.' });
   }
   try {
-    const reviews = await Review.find({ productId, status: 'approved' })
+    const reviews = await Review.find({ productId })
       .sort({ createdAt: -1 })
       .lean();
-    res.json(reviews.map(formatReview));
+    res.json(reviews.map((r) => formatReview(r, { redactUnapprovedComment: true })));
   } catch (err) {
     console.error('Failed to load reviews:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+async function hasPurchasedProduct(userId, productId) {
+  const order = await Order.findOne({
+    userId: String(userId),
+    paymentStatus: 'approved',
+    status: 'delivered',
+    'items.productId': productId,
+  }).select('_id').lean();
+  return !!order;
+}
+
+// Auth: report whether the caller is eligible to review this product (i.e. has purchased it).
+productReviewsRouter.get('/eligibility', authenticate, async (req, res) => {
+  const { productId } = req.params;
+  if (!mongoose.isValidObjectId(productId)) {
+    return res.status(400).json({ error: 'Invalid product id.' });
+  }
+  try {
+    const eligible = await hasPurchasedProduct(req.user.id, productId);
+    res.json({ eligible });
+  } catch (err) {
+    console.error('Failed to check review eligibility:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -69,14 +95,18 @@ productReviewsRouter.post('/', authenticate, async (req, res) => {
   }
 
   try {
-    const [product, user, existing] = await Promise.all([
+    const [product, user, existing, purchased] = await Promise.all([
       Product.findById(productId),
       User.findById(req.user.id),
       Review.findOne({ productId, userId: req.user.id }),
+      hasPurchasedProduct(req.user.id, productId),
     ]);
 
     if (!product) return res.status(404).json({ error: 'Product not found.' });
     if (!user)    return res.status(404).json({ error: 'User not found.' });
+    if (!purchased) {
+      return res.status(403).json({ error: 'You can only review this product after your order has been delivered.' });
+    }
 
     const userName = user.full_name || user.fullName || user.username || 'Anonymous';
 
@@ -84,7 +114,6 @@ productReviewsRouter.post('/', authenticate, async (req, res) => {
       const nextStatus = statusForUpdatedReview({
         existing,
         newComment: comment,
-        newRating: ratingResult.rating,
       });
       const previousStatus = existing.status;
       existing.rating = ratingResult.rating;
@@ -123,7 +152,7 @@ productReviewsRouter.post('/', authenticate, async (req, res) => {
   }
 });
 
-const managerModeration = [authenticate, requireRole('product_manager'), managerPass];
+const managerModeration = [authenticate, requireRole('product_manager')];
 
 // Manager: list reviews awaiting action across all products.
 reviewsRouter.get('/pending', managerModeration, async (req, res) => {
@@ -137,7 +166,11 @@ reviewsRouter.get('/rejected', managerModeration, async (req, res) => {
 
 async function listModerationQueue(req, res, status) {
   try {
-    const reviews = await Review.find({ status })
+    // Only reviews with a non-empty comment are subject to moderation.
+    const reviews = await Review.find({
+      status,
+      comment: { $exists: true, $nin: ['', null] },
+    })
       .sort({ createdAt: 1 })
       .lean();
     const productIds = [...new Set(reviews.map((r) => String(r.productId)))];
@@ -187,10 +220,14 @@ reviewsRouter.patch('/:id/moderate', managerModeration, async (req, res) => {
   }
 });
 
-function formatReview(raw) {
+function formatReview(raw, opts = {}) {
   if (!raw) return raw;
   const { _id, __v, ...rest } = raw;
-  return { ...rest, id: _id ? String(_id) : raw.id };
+  const out = { ...rest, id: _id ? String(_id) : raw.id };
+  if (opts.redactUnapprovedComment && out.status !== 'approved') {
+    out.comment = '';
+  }
+  return out;
 }
 
 module.exports = { productReviewsRouter, reviewsRouter };
