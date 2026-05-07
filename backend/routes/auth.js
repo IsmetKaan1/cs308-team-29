@@ -37,16 +37,17 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, username, identifier, password } = req.body;
+  const id = (identifier || email || username || '').trim();
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  if (!id || !password) {
+    return res.status(400).json({ error: 'Email/username and password are required' });
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ $or: [{ email: id }, { username: id }] });
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const token = jwt.sign({ id: user._id.toString(), email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });

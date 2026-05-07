@@ -3,9 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import Spinner from './Spinner';
 
-export default function StockPanel({ managerPass }) {
+export default function StockPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   const currentSearch = searchParams.get('q') || '';
   const currentSort = searchParams.get('sort') || '';
   const currentCategory = searchParams.get('category') || '';
@@ -26,22 +26,22 @@ export default function StockPanel({ managerPass }) {
   }, []);
 
   useEffect(() => {
-    setSearchInput(currentSearch); 
+    setSearchInput(currentSearch);
     fetchStock();
-  }, [currentSearch, currentSort, currentCategory, managerPass]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSearch, currentSort, currentCategory]);
 
   const fetchStock = async () => {
     setLoading(true);
     setError('');
     try {
-      
       const query = new URLSearchParams({
         ...(currentSearch && { q: currentSearch }),
         ...(currentSort && { sort: currentSort }),
-        ...(currentCategory && { category: currentCategory })
+        ...(currentCategory && { category: currentCategory }),
       }).toString();
 
-      const data = await api.managerGet(`/api/products/stock?${query}`, managerPass);
+      const data = await api.get(`/api/products/stock?${query}`);
       setProducts(data);
       setStockDrafts(
         Object.fromEntries(
@@ -51,8 +51,8 @@ export default function StockPanel({ managerPass }) {
           ])
         )
       );
-    } catch (err) {
-      setError('Failed to load stock data or endpoint is not ready.');
+    } catch {
+      setError('Failed to load stock data.');
       setProducts([]);
     } finally {
       setLoading(false);
@@ -63,13 +63,22 @@ export default function StockPanel({ managerPass }) {
     e.preventDefault();
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      if (searchInput.trim()) {
-        next.set('q', searchInput.trim());
-      } else {
-        next.delete('q'); 
-      }
+      if (searchInput.trim()) next.set('q', searchInput.trim());
+      else next.delete('q');
       return next;
     });
+  };
+
+  const handleSearchInputChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    if (!value.trim() && currentSearch) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('q');
+        return next;
+      });
+    }
   };
 
   const handleStockDraftChange = (productId, value) => {
@@ -85,7 +94,7 @@ export default function StockPanel({ managerPass }) {
     if (!Number.isInteger(quantityInStock) || quantityInStock < 0) {
       setFeedback((prev) => ({
         ...prev,
-        [product.id]: { type: 'err', text: 'Stock must be a non-negative integer.' },
+        [product.id]: { type: 'err', text: 'Invalid value.' },
       }));
       return;
     }
@@ -93,16 +102,15 @@ export default function StockPanel({ managerPass }) {
     setUpdatingIds((prev) => ({ ...prev, [product.id]: true }));
     setFeedback((prev) => ({ ...prev, [product.id]: null }));
     try {
-      const updated = await api.managerPatch(
+      const updated = await api.patch(
         `/api/products/${product.id}/stock`,
-        { quantityInStock },
-        managerPass
+        { quantityInStock }
       );
       setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       setStockDrafts((prev) => ({ ...prev, [updated.id]: String(updated.quantityInStock ?? 0) }));
       setFeedback((prev) => ({
         ...prev,
-        [product.id]: { type: 'ok', text: 'Saved.' },
+        [product.id]: { type: 'ok', text: 'Saved' },
       }));
     } catch (err) {
       setFeedback((prev) => ({
@@ -120,7 +128,7 @@ export default function StockPanel({ managerPass }) {
       const next = new URLSearchParams(prev);
       if (val) next.set('sort', val);
       else next.delete('sort');
-      return next; 
+      return next;
     });
   };
 
@@ -134,107 +142,130 @@ export default function StockPanel({ managerPass }) {
     });
   };
 
+  const smallBtn = {
+    padding: '6px 12px',
+    fontSize: 'var(--fs-13)',
+    borderRadius: 'var(--radius-md)',
+  };
+  const cellInput = {
+    width: 90,
+    padding: '6px 10px',
+    fontSize: 'var(--fs-13)',
+  };
+
   return (
     <div className="container-md">
-      <div className="filters-bar" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-          <input 
-            type="text" 
-            className="form-input" 
-            placeholder="Search by product name or description..." 
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <button type="submit" className="btn btn-primary">Search</button>
-        </form>
+      <div className="page-hero">
+        <h1>Stock Management</h1>
+        <p>Edit the stock counts of products.</p>
+      </div>
 
+      <form
+        onSubmit={handleSearch}
+        style={{
+          display: 'flex',
+          gap: 'var(--space-2)',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          marginBottom: 'var(--space-4)',
+        }}
+      >
+        <input
+          type="search"
+          className="form-input"
+          placeholder="Search products..."
+          value={searchInput}
+          onChange={handleSearchInputChange}
+          style={{ flex: '1 1 220px', minWidth: 180 }}
+        />
         <select value={currentSort} onChange={handleSort} className="form-input" style={{ width: 'auto' }}>
-          <option value="">Default Sort</option>
-          <option value="price_asc">Price (Low to High)</option>
-          <option value="price_desc">Price (High to Low)</option>
+          <option value="">Sort</option>
+          <option value="price_asc">Price ↑</option>
+          <option value="price_desc">Price ↓</option>
           <option value="popularity">Popularity</option>
         </select>
-
         <select value={currentCategory} onChange={handleCategory} className="form-input" style={{ width: 'auto' }}>
-          <option value="">All Categories</option>
+          <option value="">All categories</option>
           {categories.map((category) => (
             <option key={category} value={category}>{category}</option>
           ))}
         </select>
-      </div>
+      </form>
 
-      {loading && <Spinner label="Loading stock data..." />}
-      {error && <div className="error-message">{error}</div>}
-      
+      {loading && <Spinner label="Loading..." />}
+      {error && !loading && <div className="error-message">{error}</div>}
+
       {!loading && !error && products.length === 0 && (
         <div className="empty-state">
-          <p>No products found matching the criteria.</p>
+          <p>No products match these criteria.</p>
         </div>
       )}
 
-      {/* Product stock table skeleton */}
       {!loading && products.length > 0 && (
-        <table className="table" style={{ width: '100%', textAlign: 'left' }}>
-          <thead>
-            <tr>
-              <th>Product Code</th>
-              <th>Name</th>
-              <th>Stock</th>
-              <th>Popularity</th>
-              <th>Action</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => {
-              const currentStock = p.quantityInStock ?? p.stock ?? 0;
-              const draft = stockDrafts[p.id] ?? String(currentStock);
-              const changed = Number(draft) !== currentStock;
-              return (
-                <tr key={p.id}>
-                  <td>{p.code}</td>
-                  <td>{p.name}</td>
-                  <td>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      className="form-input"
-                      value={draft}
-                      onChange={(e) => handleStockDraftChange(p.id, e.target.value)}
-                      style={{ maxWidth: 110 }}
-                      aria-label={`${p.code} stock`}
-                    />
-                  </td>
-                  <td>{p.popularityScore ?? 0}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-primary"
-                      disabled={updatingIds[p.id] || !changed || draft === ''}
-                      onClick={() => handleStockUpdate(p)}
-                    >
-                      {updatingIds[p.id] ? 'Saving...' : 'Update'}
-                    </button>
-                  </td>
-                  <td>
-                    {feedback[p.id] && (
-                      <span
-                        className={`order-feedback ${
-                          feedback[p.id].type === 'ok'
-                            ? 'order-feedback--ok'
-                            : 'order-feedback--err'
-                        }`}
+        <div style={{ overflowX: 'auto' }}>
+          <table className="table" style={{ width: '100%', textAlign: 'left', fontSize: 'var(--fs-14)' }}>
+            <thead>
+              <tr style={{ color: 'var(--color-ink-500)', fontWeight: 'var(--fw-medium)' }}>
+                <th style={{ padding: '10px 12px' }}>Code</th>
+                <th style={{ padding: '10px 12px' }}>Name</th>
+                <th style={{ padding: '10px 12px' }}>Category</th>
+                <th style={{ padding: '10px 12px' }}>Stock</th>
+                <th style={{ padding: '10px 12px' }}>Popularity</th>
+                <th style={{ padding: '10px 12px' }} aria-label="Action"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((p) => {
+                const currentStock = p.quantityInStock ?? p.stock ?? 0;
+                const draft = stockDrafts[p.id] ?? String(currentStock);
+                const changed = Number(draft) !== currentStock;
+                const fb = feedback[p.id];
+                return (
+                  <tr key={p.id} style={{ borderTop: '1px solid var(--color-ink-100)' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>{p.code}</td>
+                    <td style={{ padding: '10px 12px' }}>{p.name}</td>
+                    <td style={{ padding: '10px 12px', color: 'var(--color-ink-500)' }}>{p.category}</td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        className="form-input"
+                        value={draft}
+                        onChange={(e) => handleStockDraftChange(p.id, e.target.value)}
+                        style={cellInput}
+                        aria-label={`${p.code} stock`}
+                      />
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--color-ink-600)' }}>{p.popularityScore ?? 0}</td>
+                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={smallBtn}
+                        disabled={updatingIds[p.id] || !changed || draft === ''}
+                        onClick={() => handleStockUpdate(p)}
                       >
-                        {feedback[p.id].text}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                        {updatingIds[p.id] ? '...' : 'Save'}
+                      </button>
+                      {fb && (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            fontSize: 'var(--fs-12)',
+                            color: fb.type === 'ok' ? 'var(--color-success-700, #15803d)' : 'var(--color-danger-700, #b91c1c)',
+                          }}
+                        >
+                          {fb.text}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
