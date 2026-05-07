@@ -1,8 +1,8 @@
 const STEPS = ['processing', 'in-transit', 'delivered'];
-const LABELS_TR = {
-  processing: 'Hazırlanıyor',
-  'in-transit': 'Kargoda',
-  delivered: 'Teslim Edildi',
+const LABELS = {
+  processing: 'Processing',
+  'in-transit': 'In Transit',
+  delivered: 'Delivered',
 };
 const STATUS_ALIASES = {
   Processing: 'processing',
@@ -15,7 +15,7 @@ export default function OrderStepper({ status }) {
   const currentIndex = STEPS.indexOf(normalizedStatus);
 
   return (
-    <div className="stepper" role="list" aria-label="Sipariş durumu">
+    <div className="stepper" role="list" aria-label="Order status">
       {STEPS.map((step, i) => {
         const isDone = i < currentIndex;
         const isActive = i === currentIndex;
@@ -36,7 +36,7 @@ export default function OrderStepper({ status }) {
               )}
             </div>
             <span className={`stepper-label ${state}`.trim()}>
-              {LABELS_TR[step] || step}
+              {LABELS[step] || step}
             </span>
           </div>
         );

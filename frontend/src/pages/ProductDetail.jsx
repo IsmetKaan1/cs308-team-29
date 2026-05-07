@@ -31,19 +31,19 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return;
     dispatch({ type: 'ADD_ITEM', product });
-    setMessage('Ürün sepete eklendi.');
+    setMessage('Item added to cart.');
     setTimeout(() => setMessage(''), 2500);
   };
 
   const renderBody = () => {
-    if (loading) return <Spinner label="Ürün yükleniyor..." />;
+    if (loading) return <Spinner label="Loading product..." />;
 
     if (error || !product) {
       return (
         <div className="empty-state">
-          <h2>Ürün bulunamadı</h2>
-          <p>{error || 'Aradığınız ürün mevcut değil veya kaldırılmış olabilir.'}</p>
-          <button className="btn btn-primary" onClick={() => navigate('/')}>Ana sayfaya dön</button>
+          <h2>Product not found</h2>
+          <p>{error || 'The product you are looking for does not exist or has been removed.'}</p>
+          <button className="btn btn-primary" onClick={() => navigate('/')}>Back to home</button>
         </div>
       );
     }
@@ -59,26 +59,26 @@ const ProductDetail = () => {
           <div className="rating-summary" style={{ marginBottom: 'var(--space-3)' }}>
             <Stars value={product.averageRating} size="lg" />
             <span className="rating-summary-value">{product.averageRating.toFixed(1)}</span>
-            <span className="rating-summary-count">({product.reviewCount} değerlendirme)</span>
+            <span className="rating-summary-count">({product.reviewCount} reviews)</span>
           </div>
         )}
         <p className="detail-desc">{product.description}</p>
 
         <div className="detail-info-grid">
           <div>
-            <span className="detail-info-label">Fiyat</span>
+            <span className="detail-info-label">Price</span>
             <strong className="detail-info-value">{product.price.toFixed(2)} ₺</strong>
           </div>
           <div>
-            <span className="detail-info-label">Stok</span>
+            <span className="detail-info-label">Stock</span>
             <strong className={`detail-info-value ${isOutOfStock ? 'detail-info-value--stock-out' : 'detail-info-value--stock-in'}`}>
-              {availableStock == null ? 'Mevcut' : isOutOfStock ? 'Stokta yok' : `${availableStock} adet`}
+              {availableStock == null ? 'Available' : isOutOfStock ? 'Out of stock' : `${availableStock} in stock`}
             </strong>
           </div>
         </div>
 
         <h2 style={{ fontSize: 'var(--fs-18)', marginTop: 'var(--space-6)', marginBottom: 'var(--space-3)' }}>
-          Ürün Bilgileri
+          Product Details
         </h2>
         <div className="detail-info-grid">
           {product.model && (
@@ -89,19 +89,19 @@ const ProductDetail = () => {
           )}
           {product.serialNumber && (
             <div>
-              <span className="detail-info-label">Seri No</span>
+              <span className="detail-info-label">Serial No</span>
               <strong className="detail-info-value" style={{ fontSize: 'var(--fs-15)' }}>{product.serialNumber}</strong>
             </div>
           )}
           <div>
-            <span className="detail-info-label">Garanti</span>
+            <span className="detail-info-label">Warranty</span>
             <strong className="detail-info-value" style={{ fontSize: 'var(--fs-15)' }}>
-              {product.warrantyMonths > 0 ? `${product.warrantyMonths} ay` : 'Garantisiz'}
+              {product.warrantyMonths > 0 ? `${product.warrantyMonths} months` : 'No warranty'}
             </strong>
           </div>
           {product.distributorInfo && (
             <div>
-              <span className="detail-info-label">Distribütör</span>
+              <span className="detail-info-label">Distributor</span>
               <strong className="detail-info-value" style={{ fontSize: 'var(--fs-15)' }}>{product.distributorInfo}</strong>
             </div>
           )}
@@ -116,10 +116,10 @@ const ProductDetail = () => {
             onClick={handleAddToCart}
             disabled={isOutOfStock}
           >
-            {isOutOfStock ? 'Stokta Yok' : 'Sepete Ekle'}
+            {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
           </button>
           <button type="button" className="btn btn-secondary btn-lg" onClick={() => navigate('/')}>
-            ← Alışverişe Dön
+            ← Back to Shop
           </button>
         </div>
       </div>

@@ -52,7 +52,7 @@ export default function ProfileSettingsPage() {
       const data = await api.put('/api/profile', { username, fullName, gender });
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data));
-      setMessage('Profil başarıyla güncellendi.');
+      setMessage('Profile updated successfully.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -65,13 +65,13 @@ export default function ProfileSettingsPage() {
     setPwError('');
     setPwMessage('');
 
-    if (newPassword !== confirmNewPassword) { setPwError('Yeni şifreler eşleşmiyor.'); return; }
-    if (newPassword.length < 8) { setPwError('Yeni şifre en az 8 karakter olmalı.'); return; }
+    if (newPassword !== confirmNewPassword) { setPwError('New passwords do not match.'); return; }
+    if (newPassword.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
 
     setPwSaving(true);
     try {
       await api.put('/api/profile/password', { currentPassword, newPassword });
-      setPwMessage('Şifre başarıyla değiştirildi.');
+      setPwMessage('Password changed successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
@@ -99,7 +99,7 @@ export default function ProfileSettingsPage() {
       <div className="page">
         <AppHeader showNav={false} />
         <main className="page-body">
-          <Spinner label="Yükleniyor..." />
+          <Spinner label="Loading..." />
         </main>
       </div>
     );
@@ -122,16 +122,16 @@ export default function ProfileSettingsPage() {
               type="button"
               className="btn btn-ghost btn-sm settings-back-btn"
               onClick={handleBack}
-              aria-label="Geri dön"
+              aria-label="Go back"
             >
-              ← Geri
+              ← Back
             </button>
-            <h1>Hesap Ayarları</h1>
+            <h1>Account Settings</h1>
             <p style={{ color: 'var(--color-ink-500)', fontSize: 'var(--fs-14)', marginTop: 4 }}>
-              Profilini yönet ve şifreni güncelle.
+              Manage your profile and update your password.
             </p>
           </div>
-          <button className="btn btn-danger" onClick={handleLogout}>Çıkış Yap</button>
+          <button className="btn btn-danger" onClick={handleLogout}>Log Out</button>
         </div>
 
         <div className="settings-card">
@@ -145,7 +145,7 @@ export default function ProfileSettingsPage() {
 
           <hr className="section-divider" />
 
-          <h2>Profil Bilgileri</h2>
+          <h2>Profile Information</h2>
 
           {message && <div className="success-message">{message}</div>}
           {error && <div className="error-message">{error}</div>}
@@ -153,7 +153,7 @@ export default function ProfileSettingsPage() {
           <form onSubmit={handleProfileUpdate} noValidate>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="ps-username">Kullanıcı Adı</label>
+                <label htmlFor="ps-username">Username</label>
                 <input
                   id="ps-username"
                   type="text"
@@ -164,7 +164,7 @@ export default function ProfileSettingsPage() {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="ps-gender">Cinsiyet</label>
+                <label htmlFor="ps-gender">Gender</label>
                 <select
                   id="ps-gender"
                   className="form-select"
@@ -172,16 +172,16 @@ export default function ProfileSettingsPage() {
                   onChange={(e) => setGender(e.target.value)}
                   required
                 >
-                  <option value="Male">Erkek</option>
-                  <option value="Female">Kadın</option>
-                  <option value="Other">Diğer</option>
-                  <option value="Prefer not to say">Belirtmek istemiyorum</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
                 </select>
               </div>
             </div>
 
             <div className="form-group">
-              <label htmlFor="ps-fullname">Ad Soyad</label>
+              <label htmlFor="ps-fullname">Full Name</label>
               <input
                 id="ps-fullname"
                 type="text"
@@ -193,25 +193,25 @@ export default function ProfileSettingsPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="ps-email">E-posta</label>
+              <label htmlFor="ps-email">Email</label>
               <input id="ps-email" type="email" className="form-input" value={user.email} disabled />
             </div>
 
             <button type="submit" className="btn btn-primary btn-lg" disabled={saving}>
-              {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </form>
 
           <hr className="section-divider" />
 
-          <h2>Şifre Değiştir</h2>
+          <h2>Change Password</h2>
 
           {pwMessage && <div className="success-message">{pwMessage}</div>}
           {pwError && <div className="error-message">{pwError}</div>}
 
           <form onSubmit={handlePasswordChange} noValidate>
             <div className="form-group">
-              <label htmlFor="ps-current-pw">Mevcut Şifre</label>
+              <label htmlFor="ps-current-pw">Current Password</label>
               <input
                 id="ps-current-pw"
                 type="password"
@@ -224,7 +224,7 @@ export default function ProfileSettingsPage() {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="ps-new-pw">Yeni Şifre</label>
+                <label htmlFor="ps-new-pw">New Password</label>
                 <input
                   id="ps-new-pw"
                   type="password"
@@ -236,7 +236,7 @@ export default function ProfileSettingsPage() {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="ps-confirm-pw">Yeni Şifre (Tekrar)</label>
+                <label htmlFor="ps-confirm-pw">Confirm New Password</label>
                 <input
                   id="ps-confirm-pw"
                   type="password"
@@ -250,7 +250,7 @@ export default function ProfileSettingsPage() {
             </div>
 
             <button type="submit" className="btn btn-primary btn-lg" disabled={pwSaving}>
-              {pwSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+              {pwSaving ? 'Updating...' : 'Update Password'}
             </button>
           </form>
         </div>

@@ -6,7 +6,7 @@ const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const { dispatch } = useCart();
   const availableStock = product.quantityInStock ?? product.stock;
-  const isOutOfStock = availableStock != null && availableStock <= 0;
+  const isOutOfStock = availableStock == null || availableStock <= 0;
   const hasReviews = (product.reviewCount || 0) > 0;
 
   return (
@@ -30,11 +30,9 @@ const ProductCard = ({ product }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <div className="product-card-price">{product.price.toFixed(2)} ₺</div>
         <span className={`product-stock-chip${isOutOfStock ? ' product-stock-chip--out' : ''}`}>
-          {availableStock == null
-            ? 'Stokta'
-            : isOutOfStock
-              ? 'Stokta yok'
-              : `${availableStock} adet stokta`}
+          {isOutOfStock
+            ? 'Out of stock'
+            : `${availableStock} in stock`}
         </span>
       </div>
 
@@ -45,14 +43,14 @@ const ProductCard = ({ product }) => {
           disabled={isOutOfStock}
           onClick={() => dispatch({ type: 'ADD_ITEM', product })}
         >
-          {isOutOfStock ? 'Stokta Yok' : 'Sepete Ekle'}
+          {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
         </button>
         <button
           type="button"
           className="btn btn-secondary btn-block"
           onClick={() => navigate(`/product/${product.id}`)}
         >
-          Detayları Gör
+          View Details
         </button>
       </div>
     </article>

@@ -20,7 +20,7 @@ const CartSidebar = () => {
       />
       <div className="cart-sidebar">
         <div className="cart-header">
-          <h2>Sepet ({state.totalItems})</h2>
+          <h2>Cart ({state.totalItems})</h2>
           <button
             className="cart-close-btn"
             onClick={() => dispatch({ type: 'CLOSE_CART' })}
@@ -32,7 +32,7 @@ const CartSidebar = () => {
 
         <div className="cart-items">
           {state.items.length === 0 ? (
-            <p className="cart-empty">Sepetiniz boş.</p>
+            <p className="cart-empty">Your cart is empty.</p>
           ) : (
             state.items.map((item) => (
               <div key={item.id} className="cart-item">
@@ -41,7 +41,7 @@ const CartSidebar = () => {
                   <span className="cart-item-name">{item.name}</span>
                   {(item.quantityInStock ?? item.stock) != null && (
                     <span className="cart-item-code">
-                      Stok: {item.quantityInStock ?? item.stock}
+                      Stock: {item.quantityInStock ?? item.stock}
                     </span>
                   )}
                   <span className="cart-item-price">{(item.price * item.quantity).toFixed(2)} ₺</span>
@@ -77,15 +77,15 @@ const CartSidebar = () => {
         {state.items.length > 0 && (
           <div className="cart-footer">
             <div className="cart-total">
-              <span>Toplam</span>
+              <span>Total</span>
               <span>{state.totalPrice.toFixed(2)} ₺</span>
             </div>
-            <button className="cart-checkout-btn" onClick={handleCheckout}>Satın Al</button>
+            <button className="cart-checkout-btn" onClick={handleCheckout}>Checkout</button>
             <button
               className="cart-clear-btn"
               onClick={() => dispatch({ type: 'CLEAR_CART' })}
             >
-              Sepeti Temizle
+              Clear Cart
             </button>
           </div>
         )}

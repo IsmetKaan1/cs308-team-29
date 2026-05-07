@@ -39,16 +39,16 @@ function renderCheckout({ items = [], totalPrice = 0, token = 'test-token' } = {
 }
 
 function fillAddress() {
-  fireEvent.change(screen.getByPlaceholderText('Ad Soyad'), { target: { value: 'Test User' } });
-  fireEvent.change(screen.getByPlaceholderText('Sokak, apartman no'), { target: { value: '123 Demo' } });
-  fireEvent.change(screen.getByPlaceholderText('İstanbul'), { target: { value: 'Istanbul' } });
+  fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'Test User' } });
+  fireEvent.change(screen.getByPlaceholderText('Street, building no'), { target: { value: '123 Demo' } });
+  fireEvent.change(screen.getByPlaceholderText('Istanbul'), { target: { value: 'Istanbul' } });
   fireEvent.change(screen.getByPlaceholderText('34000'), { target: { value: '34000' } });
-  fireEvent.change(screen.getByPlaceholderText('Türkiye'), { target: { value: 'Turkey' } });
+  fireEvent.change(screen.getByPlaceholderText('Turkey'), { target: { value: 'Turkey' } });
 }
 
 function goToPaymentStep() {
   fillAddress();
-  fireEvent.click(screen.getByRole('button', { name: /Ödemeye Geç/i }));
+  fireEvent.click(screen.getByRole('button', { name: /Continue to Payment/i }));
 }
 
 function fillPayment({ cardNumber = '4242 4242 4242 4242', expiry = '12/30', cvv = '123' } = {}) {
@@ -57,7 +57,7 @@ function fillPayment({ cardNumber = '4242 4242 4242 4242', expiry = '12/30', cvv
   fireEvent.change(screen.getByPlaceholderText('123'), { target: { value: cvv } });
   // Only one "Ad Soyad" input is visible on the payment step (cardholder),
   // because the shipping step is unmounted.
-  fireEvent.change(screen.getByPlaceholderText('Ad Soyad'), { target: { value: 'Test User' } });
+  fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'Test User' } });
 }
 
 describe('CheckoutPage', () => {
@@ -73,8 +73,8 @@ describe('CheckoutPage', () => {
 
   test('shows guest gate with login button when no token present', () => {
     renderCheckout({ token: null });
-    expect(screen.getByText(/Giriş Gerekli/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Giriş Yap/i })).toBeInTheDocument();
+    expect(screen.getByText(/Login Required/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sign In/i })).toBeInTheDocument();
   });
 
   test('renders all five address inputs on the shipping step', () => {
@@ -82,16 +82,16 @@ describe('CheckoutPage', () => {
       items: [{ id: 'p1', code: 'CS', name: 'SE', price: 100, quantity: 1 }],
       totalPrice: 100,
     });
-    expect(screen.getByPlaceholderText('Ad Soyad')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Sokak, apartman no')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('İstanbul')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Full name')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Street, building no')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Istanbul')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('34000')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Türkiye')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Turkey')).toBeInTheDocument();
   });
 
   test('shipping "continue" button is disabled when cart is empty', () => {
     renderCheckout({ items: [], totalPrice: 0 });
-    const btn = screen.getByRole('button', { name: /Ödemeye Geç/i });
+    const btn = screen.getByRole('button', { name: /Continue to Payment/i });
     expect(btn).toBeDisabled();
   });
 
@@ -107,7 +107,7 @@ describe('CheckoutPage', () => {
 
   test('shows empty-cart message in summary when cart has no items', () => {
     renderCheckout({ items: [], totalPrice: 0 });
-    expect(screen.getByText(/Sepetiniz boş/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your cart is empty/i)).toBeInTheDocument();
   });
 
   test('advances to the payment step after shipping is filled', () => {
@@ -116,7 +116,7 @@ describe('CheckoutPage', () => {
       totalPrice: 100,
     });
     goToPaymentStep();
-    expect(screen.getByRole('button', { name: /Siparişi Tamamla/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Place Order/i })).toBeInTheDocument();
     expect(screen.getByText(/Mock Payment — No Real Card/i)).toBeInTheDocument();
   });
 
@@ -130,7 +130,7 @@ describe('CheckoutPage', () => {
 
     goToPaymentStep();
     fillPayment();
-    fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Place Order/i }));
 
     await waitFor(() => {
       expect(apiMock.post).toHaveBeenNthCalledWith(1, '/api/payments/mock', expect.objectContaining({
@@ -170,7 +170,7 @@ describe('CheckoutPage', () => {
 
     goToPaymentStep();
     fillPayment({ cardNumber: '4242 4242 4242 0000' });
-    fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Place Order/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/bank declined/i)).toBeInTheDocument();
@@ -186,9 +186,9 @@ describe('CheckoutPage', () => {
 
     goToPaymentStep();
     fillPayment({ cvv: '12' });
-    fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Place Order/i }));
 
-    expect(screen.getByText(/CVV 3 haneli olmalı/i)).toBeInTheDocument();
+    expect(screen.getByText(/CVV must be 3 digits/i)).toBeInTheDocument();
     expect(apiMock.post).not.toHaveBeenCalled();
   });
 
@@ -202,7 +202,7 @@ describe('CheckoutPage', () => {
 
     goToPaymentStep();
     fillPayment();
-    fireEvent.click(screen.getByRole('button', { name: /Siparişi Tamamla/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Place Order/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Not enough stock/i)).toBeInTheDocument();

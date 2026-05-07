@@ -35,7 +35,7 @@ export default function OrderConfirmationPage() {
         objectUrl = URL.createObjectURL(blob);
         setInvoiceUrl(objectUrl);
       } catch (err) {
-        if (!cancelled) setInvoiceError(err.message || 'Fatura yüklenemedi.');
+        if (!cancelled) setInvoiceError(err.message || 'Could not load invoice.');
       } finally {
         if (!cancelled) setInvoiceLoading(false);
       }
@@ -67,11 +67,11 @@ export default function OrderConfirmationPage() {
       const res = await api.post(`/api/orders/${orderId}/invoice/resend`, {});
       setResendMessage(
         res?.email
-          ? `Fatura ${res.email} adresine tekrar gönderildi.`
-          : 'Fatura e-posta adresine tekrar gönderildi.'
+          ? `Invoice was resent to ${res.email}.`
+          : 'Invoice was resent to your email.'
       );
     } catch (err) {
-      setInvoiceError(err.message || 'Fatura gönderilemedi.');
+      setInvoiceError(err.message || 'Could not send invoice.');
     } finally {
       setResending(false);
     }
@@ -87,16 +87,16 @@ export default function OrderConfirmationPage() {
           <div className="settings-card" style={{ margin: '0 auto', maxWidth: 860 }}>
             <div className="confirmation-hero">
               <div className="confirmation-hero-icon" aria-hidden="true">✓</div>
-              <h2>Siparişin alındı!</h2>
-              <p>Teşekkürler, kısa süre içinde işleme alınacak.</p>
+              <h2>Order received!</h2>
+              <p>Thanks, your order will be processed shortly.</p>
             </div>
 
             <div className="order-meta-row">
-              <span>Sipariş No</span>
+              <span>Order No</span>
               <strong>{order.id}</strong>
             </div>
 
-            <h2>Sipariş Detayları</h2>
+            <h2>Order Details</h2>
             <div className="checkout-items" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
               {order.items.map((item) => (
                 <div key={item._id || item.productId} className="checkout-item">
@@ -117,11 +117,11 @@ export default function OrderConfirmationPage() {
             <div className="checkout-divider" />
 
             <div className="checkout-total" style={{ marginBottom: 'var(--space-6)' }}>
-              <span>Toplam</span>
+              <span>Total</span>
               <span>{order.totalPrice.toFixed(2)} ₺</span>
             </div>
 
-            <h2>Teslimat Adresi</h2>
+            <h2>Shipping Address</h2>
             <div className="confirmation-address">
               <div><strong>{order.shippingAddress.fullName}</strong></div>
               <div>{order.shippingAddress.address}</div>
@@ -131,13 +131,13 @@ export default function OrderConfirmationPage() {
               <div>{order.shippingAddress.country}</div>
             </div>
 
-            <h2>Fatura</h2>
+            <h2>Invoice</h2>
 
-            <section className="invoice-viewer" aria-label="Fatura görüntüleyici">
+            <section className="invoice-viewer" aria-label="Invoice viewer">
               <div className="invoice-viewer-header">
                 <div className="invoice-viewer-title">
-                  <strong>Sipariş Faturası</strong>
-                  <span>PDF faturayı burada görüntüleyebilirsin; e-posta gönderimi arka planda işlenir.</span>
+                  <strong>Order Invoice</strong>
+                  <span>You can view the PDF invoice here; the email is sent in the background.</span>
                 </div>
                 <div className="invoice-viewer-actions">
                   <button
@@ -146,7 +146,7 @@ export default function OrderConfirmationPage() {
                     onClick={handleResend}
                     disabled={resending}
                   >
-                    {resending ? 'Gönderiliyor...' : 'E-posta ile Tekrar Gönder'}
+                    {resending ? 'Sending...' : 'Resend by Email'}
                   </button>
                   <button
                     type="button"
@@ -154,7 +154,7 @@ export default function OrderConfirmationPage() {
                     onClick={handleDownload}
                     disabled={!invoiceUrl || invoiceLoading}
                   >
-                    Faturayı İndir
+                    Download Invoice
                   </button>
                 </div>
               </div>
@@ -162,15 +162,15 @@ export default function OrderConfirmationPage() {
               {invoiceLoading && (
                 <div className="invoice-viewer-placeholder">
                   <Spinner />
-                  <span>Fatura hazırlanıyor...</span>
+                  <span>Preparing invoice...</span>
                 </div>
               )}
 
               {!invoiceLoading && invoiceError && !invoiceUrl && (
                 <div className="invoice-viewer-placeholder" role="alert">
-                  <strong>Fatura yüklenemedi</strong>
+                  <strong>Could not load invoice</strong>
                   <span>{invoiceError}</span>
-                  <span style={{ fontSize: 'var(--fs-12)' }}>Dilersen siparişlerim sayfasından tekrar deneyebilirsin.</span>
+                  <span style={{ fontSize: 'var(--fs-12)' }}>You can try again from the My Orders page.</span>
                 </div>
               )}
 
@@ -178,7 +178,7 @@ export default function OrderConfirmationPage() {
                 <iframe
                   className="invoice-viewer-frame"
                   src={invoiceUrl}
-                  title={`Sipariş ${order.id} faturası`}
+                  title={`Invoice for order ${order.id}`}
                 />
               )}
             </section>
@@ -192,10 +192,10 @@ export default function OrderConfirmationPage() {
 
             <div className="detail-actions" style={{ marginTop: 'var(--space-6)' }}>
               <button className="btn btn-primary btn-lg" onClick={() => navigate('/')}>
-                Alışverişe Devam Et
+                Continue Shopping
               </button>
               <button className="btn btn-secondary btn-lg" onClick={() => navigate('/orders')}>
-                Siparişlerim
+                My Orders
               </button>
             </div>
           </div>

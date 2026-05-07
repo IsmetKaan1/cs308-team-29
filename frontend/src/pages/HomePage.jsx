@@ -14,12 +14,17 @@ const HomePage = () => {
   const activeCategory = searchParams.get('category') || ALL;
   const rawSort = searchParams.get('sort') || '';
   const activeSort = VALID_SORTS.has(rawSort) ? rawSort : '';
+  const searchQuery = searchParams.get('q') || '';
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(searchQuery);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     let active = true;
@@ -32,7 +37,7 @@ const HomePage = () => {
         setProducts(productsData);
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       })
-      .catch(() => { if (active) setError('Dersler yüklenemedi.'); })
+      .catch(() => { if (active) setError('Failed to load courses.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -60,6 +65,25 @@ const HomePage = () => {
     setSearchParams(next, { replace: true });
   };
 
+  const commitSearch = (raw) => {
+    const trimmed = String(raw || '').trim();
+    const next = new URLSearchParams(searchParams);
+    if (trimmed) next.set('q', trimmed);
+    else next.delete('q');
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    commitSearch(searchInput);
+  };
+
+  const handleSearchInputChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    if (!value.trim()) commitSearch('');
+  };
+
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     let list = products;
@@ -67,25 +91,32 @@ const HomePage = () => {
       list = list.filter((p) => p.category === activeCategory);
     }
     if (q) {
-      list = list.filter((p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.code.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
-      );
+      list = list.filter((p) => {
+        const haystack = [p.name, p.code, p.description, p.model, p.category]
+          .filter(Boolean)
+          .map((v) => String(v).toLowerCase());
+        return haystack.some((text) => text.includes(q));
+      });
     }
+    const num = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const stableId = (a, b) => String(a.id || '').localeCompare(String(b.id || ''));
     if (activeSort === 'price-asc') {
-      list = [...list].sort((a, b) => a.price - b.price);
+      list = [...list].sort((a, b) => (num(a.price) - num(b.price)) || stableId(a, b));
     } else if (activeSort === 'price-desc') {
-      list = [...list].sort((a, b) => b.price - a.price);
+      list = [...list].sort((a, b) => (num(b.price) - num(a.price)) || stableId(a, b));
     } else if (activeSort === 'popularity') {
       list = [...list].sort((a, b) => {
-        const scoreDiff = (b.popularityScore || 0) - (a.popularityScore || 0);
+        const scoreDiff = num(b.popularityScore) - num(a.popularityScore);
         if (scoreDiff !== 0) return scoreDiff;
-        const purchaseDiff = (b.purchaseCount || b.salesCount || 0) - (a.purchaseCount || a.salesCount || 0);
+        const purchaseDiff = num(b.purchaseCount || b.salesCount) - num(a.purchaseCount || a.salesCount);
         if (purchaseDiff !== 0) return purchaseDiff;
-        const ratingDiff = (b.averageRating || 0) - (a.averageRating || 0);
+        const ratingDiff = num(b.averageRating) - num(a.averageRating);
         if (ratingDiff !== 0) return ratingDiff;
-        return a.name.localeCompare(b.name, 'tr') || String(a.id).localeCompare(String(b.id));
+        const nameDiff = String(a.name || '').localeCompare(String(b.name || ''), 'tr');
+        return nameDiff !== 0 ? nameDiff : stableId(a, b);
       });
     }
     return list;
@@ -93,8 +124,8 @@ const HomePage = () => {
 
   const heroSubtitle =
     activeCategory === ALL
-      ? 'İhtiyacın olan dersi bul ve sepete ekle.'
-      : `${activeCategory} kategorisindeki dersler.`;
+      ? 'Find the course you need and add it to your cart.'
+      : `Courses in ${activeCategory}.`;
 
   return (
     <div className="page">
@@ -103,12 +134,12 @@ const HomePage = () => {
       <main className="page-body">
         <div className="container">
           <div className="page-hero">
-            <h1>CS Dersleri</h1>
+            <h1>CS Courses</h1>
             <p>{heroSubtitle}</p>
           </div>
 
           {categories.length > 0 && (
-            <div className="category-tabs" role="tablist" aria-label="Kategoriler">
+            <div className="category-tabs" role="tablist" aria-label="Categories">
               <button
                 type="button"
                 role="tab"
@@ -116,7 +147,7 @@ const HomePage = () => {
                 aria-pressed={activeCategory === ALL}
                 onClick={() => handleCategoryChange(ALL)}
               >
-                Tümü
+                All
                 <span className="category-tab-count">{counts[ALL] ?? 0}</span>
               </button>
               {categories.map((c) => (
@@ -136,49 +167,49 @@ const HomePage = () => {
           )}
 
           <div className="product-toolbar">
-            <div className="product-toolbar-search">
+            <form className="product-toolbar-search" onSubmit={handleSearchSubmit} role="search">
               <input
                 type="search"
                 className="search-input"
-                placeholder="Ders ara (isim, kod veya içerik)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Ders ara"
+                placeholder="Search courses (name, code or content)..."
+                value={searchInput}
+                onChange={handleSearchInputChange}
+                aria-label="Search courses"
               />
-            </div>
+            </form>
 
             <div className="sort-group">
-              <label htmlFor="sort">Sırala:</label>
+              <label htmlFor="sort">Sort:</label>
               <select
                 id="sort"
                 className="sort-select"
                 value={activeSort}
                 onChange={(e) => handleSortChange(e.target.value)}
               >
-                <option value="">Varsayılan</option>
-                <option value="popularity">Popülerlik</option>
-                <option value="price-asc">Artan Fiyat</option>
-                <option value="price-desc">Azalan Fiyat</option>
+                <option value="">Default</option>
+                <option value="popularity">Popularity</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
               </select>
             </div>
           </div>
 
-          {loading && <Spinner label="Dersler yükleniyor..." />}
+          {loading && <Spinner label="Loading courses..." />}
 
           {error && !loading && (
             <div className="empty-block" role="alert">
-              <h3>Bir sorun oluştu</h3>
+              <h3>Something went wrong</h3>
               <p>{error}</p>
             </div>
           )}
 
           {!loading && !error && filteredProducts.length === 0 && (
             <div className="empty-block">
-              <h3>Sonuç bulunamadı</h3>
+              <h3>No results found</h3>
               <p>
                 {activeCategory === ALL
-                  ? 'Arama kriterlerine uygun ders bulunamadı.'
-                  : `"${activeCategory}" kategorisinde ${searchQuery ? 'aradığın derse' : 'henüz derse'} rastlanmadı.`}
+                  ? 'No courses match your search criteria.'
+                  : `${searchQuery ? 'No courses found matching your search' : 'No courses yet'} in "${activeCategory}".`}
               </p>
             </div>
           )}

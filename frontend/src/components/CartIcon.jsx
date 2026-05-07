@@ -7,7 +7,7 @@ const CartIcon = () => {
     <button
       className="icon-btn"
       onClick={() => dispatch({ type: 'TOGGLE_CART' })}
-      aria-label={`Sepeti aç (${state.totalItems} ürün)`}
+      aria-label={`Open cart (${state.totalItems} items)`}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="9" cy="21" r="1" />

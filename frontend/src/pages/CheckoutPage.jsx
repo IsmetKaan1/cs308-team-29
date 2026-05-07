@@ -48,15 +48,15 @@ export default function CheckoutPage() {
     return (
       <div className="auth-container">
         <div className="auth-card" style={{ textAlign: 'center' }}>
-          <h2>Giriş Gerekli</h2>
-          <p className="subtitle">Ödeme sayfasına devam etmek için lütfen giriş yap.</p>
+          <h2>Login Required</h2>
+          <p className="subtitle">Please sign in to continue to checkout.</p>
           <button className="btn btn-primary btn-block btn-lg" onClick={() => navigate('/login')}>
-            Giriş Yap
+            Sign In
           </button>
           <p className="link-text">
-            Hesabın yok mu?{' '}
+            Don't have an account?{' '}
             <a href="/register" onClick={(e) => { e.preventDefault(); navigate('/register'); }}>
-              Kayıt Ol
+              Sign Up
             </a>
           </p>
         </div>
@@ -79,12 +79,12 @@ export default function CheckoutPage() {
     setShippingError('');
 
     if (state.items.length === 0) {
-      setShippingError('Sepetiniz boş.');
+      setShippingError('Your cart is empty.');
       return;
     }
     const addr = shippingAddressObject();
     if (Object.values(addr).some((v) => !v)) {
-      setShippingError('Lütfen teslimat adresindeki tüm alanları doldur.');
+      setShippingError('Please fill in all shipping address fields.');
       return;
     }
     setStep(STEP_PAYMENT);
@@ -95,10 +95,10 @@ export default function CheckoutPage() {
     setPaymentError('');
 
     const digits = cardNumber.replace(/\D+/g, '');
-    if (!cardHolder.trim()) { setPaymentError('Kart üzerindeki ad gerekli.'); return; }
-    if (digits.length !== 16) { setPaymentError('Kart numarası 16 haneli olmalı.'); return; }
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) { setPaymentError('Son kullanma tarihi AA/YY formatında olmalı.'); return; }
-    if (cvv.length !== 3) { setPaymentError('CVV 3 haneli olmalı.'); return; }
+    if (!cardHolder.trim()) { setPaymentError('Cardholder name is required.'); return; }
+    if (digits.length !== 16) { setPaymentError('Card number must be 16 digits.'); return; }
+    if (!/^\d{2}\/\d{2}$/.test(expiry)) { setPaymentError('Expiry must be in MM/YY format.'); return; }
+    if (cvv.length !== 3) { setPaymentError('CVV must be 3 digits.'); return; }
 
     setSubmitting(true);
     try {
@@ -110,7 +110,7 @@ export default function CheckoutPage() {
       });
 
       if (!payment.approved) {
-        setPaymentError(payment.error || 'Ödeme reddedildi. Lütfen farklı bir kart dene.');
+        setPaymentError(payment.error || 'Payment declined. Please try a different card.');
         return;
       }
 
@@ -122,7 +122,7 @@ export default function CheckoutPage() {
       dispatch({ type: 'CLEAR_CART' });
       navigate('/order-confirmation', { state: { order } });
     } catch (err) {
-      setPaymentError(err.message || 'Ödeme sırasında bir hata oluştu.');
+      setPaymentError(err.message || 'An error occurred during payment.');
     } finally {
       setSubmitting(false);
     }
@@ -137,23 +137,23 @@ export default function CheckoutPage() {
         <div className="container-md" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="page-hero" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
             <div>
-              <h1>Ödeme</h1>
-              <p>Teslimat bilgilerini gir ve güvenli ödeme ile tamamla.</p>
+              <h1>Checkout</h1>
+              <p>Enter your shipping details and complete the secure payment.</p>
             </div>
-            <button className="btn btn-secondary" onClick={() => navigate('/')}>← Alışverişe Dön</button>
+            <button className="btn btn-secondary" onClick={() => navigate('/')}>← Back to Shop</button>
           </div>
         </div>
 
         <div className="checkout-layout">
           <div className="checkout-form-card">
-            <div className="checkout-steps" role="tablist" aria-label="Ödeme adımları">
+            <div className="checkout-steps" role="tablist" aria-label="Checkout steps">
               <div
                 className={`checkout-step ${step === STEP_SHIPPING ? 'is-active' : 'is-done'}`}
                 role="tab"
                 aria-selected={step === STEP_SHIPPING}
               >
                 <span className="checkout-step-num">{step === STEP_SHIPPING ? '1' : '✓'}</span>
-                Teslimat
+                Shipping
               </div>
               <div className={`checkout-step-sep ${step === STEP_PAYMENT ? 'is-done' : ''}`} />
               <div
@@ -162,24 +162,24 @@ export default function CheckoutPage() {
                 aria-selected={step === STEP_PAYMENT}
               >
                 <span className="checkout-step-num">2</span>
-                Ödeme
+                Payment
               </div>
             </div>
 
             {step === STEP_SHIPPING && (
               <>
-                <h2 className="card-title">Teslimat Adresi</h2>
+                <h2 className="card-title">Shipping Address</h2>
 
                 {shippingError && <div className="error-message">{shippingError}</div>}
 
                 <form onSubmit={handleContinueToPayment} noValidate>
                   <div className="form-group">
-                    <label htmlFor="co-name">Ad Soyad</label>
+                    <label htmlFor="co-name">Full Name</label>
                     <input
                       id="co-name"
                       type="text"
                       className="form-input"
-                      placeholder="Ad Soyad"
+                      placeholder="Full name"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       required
@@ -188,12 +188,12 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="co-addr">Adres</label>
+                    <label htmlFor="co-addr">Address</label>
                     <input
                       id="co-addr"
                       type="text"
                       className="form-input"
-                      placeholder="Sokak, apartman no"
+                      placeholder="Street, building no"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       required
@@ -203,12 +203,12 @@ export default function CheckoutPage() {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="co-city">Şehir</label>
+                      <label htmlFor="co-city">City</label>
                       <input
                         id="co-city"
                         type="text"
                         className="form-input"
-                        placeholder="İstanbul"
+                        placeholder="Istanbul"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         required
@@ -216,7 +216,7 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="co-postal">Posta Kodu</label>
+                      <label htmlFor="co-postal">Postal Code</label>
                       <input
                         id="co-postal"
                         type="text"
@@ -231,12 +231,12 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="co-country">Ülke</label>
+                    <label htmlFor="co-country">Country</label>
                     <input
                       id="co-country"
                       type="text"
                       className="form-input"
-                      placeholder="Türkiye"
+                      placeholder="Turkey"
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
                       required
@@ -249,7 +249,7 @@ export default function CheckoutPage() {
                     className="btn btn-primary btn-block btn-lg"
                     disabled={!canSubmitShipping}
                   >
-                    Ödemeye Geç
+                    Continue to Payment
                   </button>
                 </form>
               </>
@@ -257,15 +257,15 @@ export default function CheckoutPage() {
 
             {step === STEP_PAYMENT && (
               <>
-                <h2 className="card-title">Kart Bilgileri</h2>
+                <h2 className="card-title">Card Details</h2>
 
                 <div className="mock-payment-banner" role="note">
                   <span className="mock-payment-banner-icon" aria-hidden="true">!</span>
                   <div>
                     <strong>Mock Payment — No Real Card</strong>
-                    Bu ödeme adımı simülasyondur. Gerçek bir kart bilgisi girme; son 4 hanesi
+                    This payment step is a simulation. Do not enter real card details; cards ending with
                     <code style={{ background: 'rgba(0,0,0,0.08)', padding: '0 4px', borderRadius: 3, margin: '0 4px' }}>0000</code>
-                    olan kartlar test amaçlı reddedilir.
+                    are declined for testing.
                   </div>
                 </div>
 
@@ -273,12 +273,12 @@ export default function CheckoutPage() {
 
                 <form onSubmit={handlePaymentSubmit} noValidate>
                   <div className="form-group">
-                    <label htmlFor="pay-holder">Kart Üzerindeki Ad</label>
+                    <label htmlFor="pay-holder">Cardholder Name</label>
                     <input
                       id="pay-holder"
                       type="text"
                       className="form-input"
-                      placeholder="Ad Soyad"
+                      placeholder="Full name"
                       value={cardHolder}
                       onChange={(e) => setCardHolder(e.target.value)}
                       required
@@ -287,7 +287,7 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="pay-number">Kart Numarası</label>
+                    <label htmlFor="pay-number">Card Number</label>
                     <input
                       id="pay-number"
                       type="text"
@@ -303,7 +303,7 @@ export default function CheckoutPage() {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="pay-expiry">Son Kullanma (AA/YY)</label>
+                      <label htmlFor="pay-expiry">Expiry (MM/YY)</label>
                       <input
                         id="pay-expiry"
                         type="text"
@@ -339,14 +339,14 @@ export default function CheckoutPage() {
                       onClick={() => setStep(STEP_SHIPPING)}
                       disabled={submitting}
                     >
-                      ← Geri
+                      ← Back
                     </button>
                     <button
                       type="submit"
                       className="btn btn-primary btn-lg"
                       disabled={submitting || state.items.length === 0}
                     >
-                      {submitting ? 'İşleniyor...' : 'Siparişi Tamamla'}
+                      {submitting ? 'Processing...' : 'Place Order'}
                     </button>
                   </div>
                 </form>
@@ -354,11 +354,11 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          <aside className="checkout-summary-card" aria-label="Sipariş özeti">
-            <h2>Sipariş Özeti</h2>
+          <aside className="checkout-summary-card" aria-label="Order summary">
+            <h2>Order Summary</h2>
 
             {state.items.length === 0 ? (
-              <p className="cart-empty">Sepetiniz boş.</p>
+              <p className="cart-empty">Your cart is empty.</p>
             ) : (
               <>
                 <div className="checkout-items">
@@ -381,7 +381,7 @@ export default function CheckoutPage() {
                 <div className="checkout-divider" />
 
                 <div className="checkout-total">
-                  <span>Toplam</span>
+                  <span>Total</span>
                   <span>{state.totalPrice.toFixed(2)} ₺</span>
                 </div>
               </>

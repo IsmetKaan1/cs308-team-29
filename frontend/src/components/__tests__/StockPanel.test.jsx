@@ -6,8 +6,11 @@ import { expect, test, vi } from 'vitest';
 
 vi.mock('../../api', () => ({
   api: {
-    get: vi.fn().mockResolvedValue(['Programming']),
-    managerGet: vi.fn().mockResolvedValue([]),
+    get: vi.fn((path) => {
+      if (path === '/api/products/categories') return Promise.resolve(['Programming']);
+      return Promise.resolve([]);
+    }),
+    patch: vi.fn().mockResolvedValue({}),
   },
 }));
 
@@ -22,7 +25,7 @@ test('updates URL with search and sort filters without overriding each other', a
       <Routes>
         <Route path="/manager" element={
           <>
-            <StockPanel managerPass="123" />
+            <StockPanel />
             <LocationDisplay />
           </>
         } />
@@ -31,10 +34,10 @@ test('updates URL with search and sort filters without overriding each other', a
   );
 
   await waitFor(() => {
-    expect(screen.getByText(/No products found matching the criteria/i)).toBeInTheDocument();
+    expect(screen.getByText(/No products match these criteria/i)).toBeInTheDocument();
   });
 
-  const searchInput = screen.getByPlaceholderText(/Search by product name or description/i);
+  const searchInput = screen.getByPlaceholderText(/Search products/i);
   await act(async () => {
     fireEvent.change(searchInput, { target: { value: 'shirt' } });
     fireEvent.submit(searchInput.closest('form'));

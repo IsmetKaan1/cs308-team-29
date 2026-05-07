@@ -5,7 +5,7 @@ const Stars = ({ value = 0, size = 'md' }) => {
     .join(' ');
 
   return (
-    <span className={cls} aria-label={`${Number(value).toFixed(1)} yıldız`}>
+    <span className={cls} aria-label={`${Number(value).toFixed(1)} stars`}>
       {[1, 2, 3, 4, 5].map((i) => (
         <span key={i} className={i <= rounded ? 'star-filled' : 'star'} aria-hidden="true">
           ★

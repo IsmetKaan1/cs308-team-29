@@ -29,8 +29,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    if (!isPasswordValid) { setError('Lütfen tüm şifre kurallarını karşıla.'); return; }
-    if (password !== confirmPassword) { setError('Şifreler eşleşmiyor.'); return; }
+    if (!isPasswordValid) { setError('Please meet all password requirements.'); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
     setLoading(true);
     try {
@@ -53,17 +53,17 @@ export default function RegisterPage() {
           className="auth-back"
           onClick={() => (step === 1 ? navigate('/login') : setStep(1))}
         >
-          ← {step === 1 ? 'Girişe dön' : 'Geri'}
+          ← {step === 1 ? 'Back to Login' : 'Back'}
         </button>
 
-        <div className="step-indicator" aria-label={`Adım ${step} / 2`}>
+        <div className="step-indicator" aria-label={`Step ${step} of 2`}>
           <span className={`step-dot ${step >= 1 ? 'active' : ''}`} />
           <span className={`step-dot ${step >= 2 ? 'active' : ''}`} />
         </div>
 
-        <h2>Hesap Oluştur</h2>
+        <h2>Create Account</h2>
         <p className="subtitle">
-          {step === 1 ? 'Önce e-posta adresinle başlayalım' : 'Biraz daha bilgi verir misin?'}
+          {step === 1 ? "Let's start with your email address" : 'Tell us a bit more about you'}
         </p>
 
         {error && <div className="error-message">{error}</div>}
@@ -71,7 +71,7 @@ export default function RegisterPage() {
         {step === 1 && (
           <form onSubmit={handleNext} noValidate>
             <div className="form-group">
-              <label htmlFor="reg-email">E-posta</label>
+              <label htmlFor="reg-email">Email</label>
               <input
                 id="reg-email"
                 type="email"
@@ -84,9 +84,9 @@ export default function RegisterPage() {
                 autoComplete="email"
               />
             </div>
-            <button type="submit" className="btn btn-primary btn-block btn-lg">Devam Et</button>
+            <button type="submit" className="btn btn-primary btn-block btn-lg">Continue</button>
             <p className="link-text">
-              Zaten hesabın var mı? <Link to="/login">Giriş yap</Link>
+              Already have an account? <Link to="/login">Sign in</Link>
             </p>
           </form>
         )}
@@ -95,7 +95,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} noValidate>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="reg-username">Kullanıcı adı</label>
+                <label htmlFor="reg-username">Username</label>
                 <input
                   id="reg-username"
                   type="text"
@@ -108,7 +108,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="reg-gender">Cinsiyet</label>
+                <label htmlFor="reg-gender">Gender</label>
                 <select
                   id="reg-gender"
                   className="form-select"
@@ -116,66 +116,66 @@ export default function RegisterPage() {
                   onChange={(e) => setGender(e.target.value)}
                   required
                 >
-                  <option value="" disabled>Seç</option>
-                  <option value="Male">Erkek</option>
-                  <option value="Female">Kadın</option>
-                  <option value="Other">Diğer</option>
-                  <option value="Prefer not to say">Belirtmek istemiyorum</option>
+                  <option value="" disabled>Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
                 </select>
               </div>
             </div>
 
             <div className="form-group">
-              <label htmlFor="reg-fullname">Ad Soyad</label>
+              <label htmlFor="reg-fullname">Full Name</label>
               <input
                 id="reg-fullname"
                 type="text"
                 className="form-input"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Ad Soyad"
+                placeholder="Full name"
                 required
                 autoComplete="name"
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="reg-password">Şifre</label>
+              <label htmlFor="reg-password">Password</label>
               <input
                 id="reg-password"
                 type="password"
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Güçlü bir şifre oluştur"
+                placeholder="Create a strong password"
                 required
                 autoComplete="new-password"
               />
-              <ul className="password-rules" aria-label="Şifre gereksinimleri">
+              <ul className="password-rules" aria-label="Password requirements">
                 <li className={hasMinLength ? 'valid' : 'invalid'}>
-                  {hasMinLength ? '✓' : '○'} En az 8 karakter
+                  {hasMinLength ? '✓' : '○'} At least 8 characters
                 </li>
                 <li className={hasUppercase ? 'valid' : 'invalid'}>
-                  {hasUppercase ? '✓' : '○'} 1 büyük harf
+                  {hasUppercase ? '✓' : '○'} 1 uppercase letter
                 </li>
                 <li className={hasLowercase ? 'valid' : 'invalid'}>
-                  {hasLowercase ? '✓' : '○'} 1 küçük harf
+                  {hasLowercase ? '✓' : '○'} 1 lowercase letter
                 </li>
                 <li className={hasNumber ? 'valid' : 'invalid'}>
-                  {hasNumber ? '✓' : '○'} 1 rakam
+                  {hasNumber ? '✓' : '○'} 1 number
                 </li>
               </ul>
             </div>
 
             <div className="form-group">
-              <label htmlFor="reg-confirm">Şifreyi onayla</label>
+              <label htmlFor="reg-confirm">Confirm Password</label>
               <input
                 id="reg-confirm"
                 type="password"
                 className="form-input"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Şifreyi tekrar gir"
+                placeholder="Re-enter password"
                 required
                 autoComplete="new-password"
               />
@@ -183,14 +183,14 @@ export default function RegisterPage() {
 
             <div className="btn-row">
               <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
-                Geri
+                Back
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={!isPasswordValid || loading}
               >
-                {loading ? 'Oluşturuluyor...' : 'Kayıt Ol'}
+                {loading ? 'Creating...' : 'Sign Up'}
               </button>
             </div>
           </form>

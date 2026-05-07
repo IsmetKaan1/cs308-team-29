@@ -32,16 +32,16 @@ export default function LoginPage() {
     <div className="auth-container">
       <div className="auth-card">
         <button type="button" className="auth-back" onClick={() => navigate('/')}>
-          ← Ana sayfa
+          ← Home
         </button>
-        <h2>Tekrar hoşgeldin</h2>
-        <p className="subtitle">Hesabına giriş yap</p>
+        <h2>Welcome back</h2>
+        <p className="subtitle">Sign in to your account</p>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
-            <label htmlFor="email">E-posta</label>
+            <label htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
@@ -56,7 +56,7 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Şifre</label>
+            <label htmlFor="password">Password</label>
             <div className="input-with-addon">
               <input
                 id="password"
@@ -64,7 +64,7 @@ export default function LoginPage() {
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Şifreni gir"
+                placeholder="Enter your password"
                 required
                 autoComplete="current-password"
               />
@@ -72,24 +72,20 @@ export default function LoginPage() {
                 type="button"
                 className="input-addon-btn"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? 'Gizle' : 'Göster'}
+                {showPassword ? 'Hide' : 'Show'}
               </button>
             </div>
           </div>
 
           <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={loading}>
-            {loading ? <><span className="spinner spinner--sm spinner--light" /> Giriş yapılıyor...</> : 'Giriş Yap'}
+            {loading ? <><span className="spinner spinner--sm spinner--light" /> Signing in...</> : 'Sign In'}
           </button>
         </form>
 
         <p className="link-text">
-          Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
-        </p>
-
-        <p className="link-text" style={{ marginTop: 4, fontSize: 'var(--fs-12)' }}>
-          <Link to="/manager">Yönetici girişi</Link>
+          Don't have an account? <Link to="/register">Sign up</Link>
         </p>
       </div>
     </div>
