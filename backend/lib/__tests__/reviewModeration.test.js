@@ -33,43 +33,43 @@ describe('sanitizeComment', () => {
 });
 
 describe('statusForNewReview', () => {
-  test('holds all new reviews for moderation', () => {
-    expect(statusForNewReview({ comment: '' })).toBe('pending');
-    expect(statusForNewReview({ comment: '   ' })).toBe('pending');
-    expect(statusForNewReview({})).toBe('pending');
+  test('rating-only reviews are auto-approved (no comment to moderate)', () => {
+    expect(statusForNewReview({ comment: '' })).toBe('approved');
+    expect(statusForNewReview({ comment: '   ' })).toBe('approved');
+    expect(statusForNewReview({})).toBe('approved');
+  });
+
+  test('reviews with a comment start as pending', () => {
     expect(statusForNewReview({ comment: 'nice course' })).toBe('pending');
   });
 });
 
 describe('statusForUpdatedReview', () => {
-  test('keeps existing approved status when rating and comment are unchanged', () => {
+  test('rating-only changes do not affect comment status', () => {
     expect(
       statusForUpdatedReview({
         existing: { comment: 'great', rating: 5, status: 'approved' },
         newComment: 'great',
-        newRating: 5,
       })
     ).toBe('approved');
   });
 
-  test('resets to pending when comment text changes', () => {
+  test('changing the comment text resets to pending', () => {
     expect(
       statusForUpdatedReview({
         existing: { comment: 'great', rating: 5, status: 'approved' },
         newComment: 'actually bad',
-        newRating: 5,
       })
     ).toBe('pending');
   });
 
-  test('resets to pending when rating changes', () => {
+  test('clearing the comment moves status to approved', () => {
     expect(
       statusForUpdatedReview({
-        existing: { comment: 'meh', rating: 2, status: 'approved' },
-        newComment: 'meh',
-        newRating: 3,
+        existing: { comment: 'meh', rating: 2, status: 'rejected' },
+        newComment: '',
       })
-    ).toBe('pending');
+    ).toBe('approved');
   });
 });
 
@@ -112,7 +112,7 @@ describe('computeAggregate', () => {
     expect(computeAggregate(null)).toEqual({ averageRating: 0, reviewCount: 0 });
   });
 
-  test('includes only approved reviews', () => {
+  test('counts every rating regardless of comment moderation status', () => {
     expect(
       computeAggregate([
         { status: 'approved', rating: 5 },
@@ -120,7 +120,7 @@ describe('computeAggregate', () => {
         { status: 'pending',  rating: 1 },
         { status: 'rejected', rating: 1 },
       ])
-    ).toEqual({ averageRating: 4, reviewCount: 2 });
+    ).toEqual({ averageRating: 2.5, reviewCount: 4 });
   });
 
   test('rounds to one decimal place', () => {

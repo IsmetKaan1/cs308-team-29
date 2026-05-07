@@ -2,12 +2,16 @@
  * Pure logic for review status transitions. No DB, no I/O, no state.
  *
  * Rules:
- * - New reviews always start as 'pending' and must be moderated before
- *   becoming public, whether they contain only a rating or also a comment.
- * - When a user updates their existing review:
- *     * Any content/rating change resets the review to 'pending'.
- * - A rejected review can be restored with the 'reopen' action. This is the
- *   "cancel rejection" path: rejected -> pending, never delete/disappear.
+ * - The rating is always public immediately. Only the comment text goes
+ *   through moderation, so a review's `status` reflects its comment.
+ * - A new review with no comment goes straight to 'approved'.
+ * - A new review with a comment starts as 'pending'.
+ * - When a user updates their review:
+ *     * Rating-only changes do not affect status.
+ *     * Clearing the comment moves status to 'approved' (nothing to moderate).
+ *     * Changing the comment text resets status to 'pending'.
+ * - A rejected review can be restored with the 'reopen' action. The rating
+ *   stays public throughout; the comment text is hidden until 'approved'.
  */
 
 const VALID_ACTIONS = ['approve', 'reject', 'reopen'];
@@ -24,18 +28,15 @@ function validateRating(value) {
   return { ok: true, rating: value };
 }
 
-function statusForNewReview() {
-  return 'pending';
+function statusForNewReview({ comment } = {}) {
+  return sanitizeComment(comment) ? 'pending' : 'approved';
 }
 
-function statusForUpdatedReview({ existing, newComment, newRating }) {
+function statusForUpdatedReview({ existing, newComment }) {
   const nextComment = sanitizeComment(newComment);
   const prevComment = sanitizeComment(existing?.comment);
-  const nextRating = Number(newRating);
-  const prevRating = Number(existing?.rating);
-  if (nextComment === prevComment && nextRating === prevRating) {
-    return existing?.status || 'pending';
-  }
+  if (!nextComment) return 'approved';
+  if (nextComment === prevComment) return existing?.status || 'pending';
   return 'pending';
 }
 
@@ -74,14 +75,18 @@ function applyModeration({ action, rejectionReason }) {
 }
 
 function computeAggregate(reviews) {
-  const approved = (reviews || []).filter((r) => r.status === 'approved');
-  const count = approved.length;
+  const list = (reviews || []).filter((r) => Number(r?.rating) > 0);
+  const count = list.length;
   if (count === 0) return { averageRating: 0, reviewCount: 0 };
-  const sum = approved.reduce((s, r) => s + (Number(r.rating) || 0), 0);
+  const sum = list.reduce((s, r) => s + (Number(r.rating) || 0), 0);
   return {
     averageRating: Math.round((sum / count) * 10) / 10,
     reviewCount: count,
   };
+}
+
+function isCommentVisible(review) {
+  return !!review && sanitizeComment(review.comment) !== '' && review.status === 'approved';
 }
 
 module.exports = {
@@ -92,4 +97,5 @@ module.exports = {
   statusForUpdatedReview,
   applyModeration,
   computeAggregate,
+  isCommentVisible,
 };

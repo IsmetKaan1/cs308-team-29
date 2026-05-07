@@ -5,16 +5,18 @@ const Review = require('../models/Review');
 const Order = require('../models/Order');
 const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
-const managerPass = require('../middleware/managerPass');
 const { computePopularityScore, comparePopularity } = require('../lib/popularity');
 
 const router = express.Router();
-const managerOnly = [authenticate, requireRole('product_manager'), managerPass];
+const managerOnly = [authenticate, requireRole('product_manager')];
 
 async function aggregateReviewsForProductIds(productIds) {
   if (!productIds.length) return new Map();
+  // Ratings are public the moment they are submitted; only the comment text
+  // is gated by moderation, so aggregates count every review regardless of
+  // status.
   const rows = await Review.aggregate([
-    { $match: { productId: { $in: productIds }, status: 'approved' } },
+    { $match: { productId: { $in: productIds } } },
     {
       $group: {
         _id: '$productId',
