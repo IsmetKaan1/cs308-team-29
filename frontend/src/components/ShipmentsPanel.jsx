@@ -10,7 +10,7 @@ const STATUS_LABEL = {
 };
 const NEXT_LABEL = {
   processing: 'Ship Out',
-  'in-transit': 'Mark as Delivered',
+  'in-transit': 'Mark Delivered',
 };
 
 function nextStatus(current) {
@@ -71,7 +71,7 @@ export default function ShipmentsPanel() {
       );
       setFeedback((s) => ({
         ...s,
-        [id]: { type: 'ok', text: `Status: ${STATUS_LABEL[next] || next}` },
+        [id]: { type: 'ok', text: STATUS_LABEL[next] || next },
       }));
     } catch (err) {
       setFeedback((s) => ({
@@ -83,6 +83,12 @@ export default function ShipmentsPanel() {
     }
   };
 
+  const smallBtn = {
+    padding: '6px 12px',
+    fontSize: 'var(--fs-13)',
+    borderRadius: 'var(--radius-md)',
+  };
+
   return (
     <div className="container-md">
       <div className="page-hero">
@@ -90,26 +96,30 @@ export default function ShipmentsPanel() {
         <p>Advance the shipping status of orders step by step.</p>
       </div>
 
-      <div className="filters-bar" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <label htmlFor="shipment-status-filter" style={{ fontSize: 'var(--fs-13)' }}>
-          Status:
-        </label>
+      <form
+        style={{
+          display: 'flex',
+          gap: 'var(--space-2)',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          marginBottom: 'var(--space-4)',
+        }}
+        onSubmit={(e) => e.preventDefault()}
+      >
         <select
           id="shipment-status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="form-input"
           style={{ width: 'auto' }}
+          aria-label="Filter by status"
         >
-          <option value="">All</option>
+          <option value="">All statuses</option>
           {STATUS_ORDER.map((s) => (
             <option key={s} value={s}>{STATUS_LABEL[s]}</option>
           ))}
         </select>
-        <button type="button" className="btn btn-ghost-light btn-sm" onClick={load} disabled={loading}>
-          Refresh
-        </button>
-      </div>
+      </form>
 
       {loading && <Spinner label="Loading orders..." />}
       {error && !loading && <div className="error-message" role="alert">{error}</div>}
@@ -121,76 +131,94 @@ export default function ShipmentsPanel() {
       )}
 
       {!loading && orders.length > 0 && (
-        <table className="table" style={{ width: '100%', textAlign: 'left' }}>
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Customer</th>
-              <th>Address</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => {
-              const id = o.id || o._id;
-              const next = nextStatus(o.status);
-              const itemSummary = (o.items || [])
-                .map((it) => `${it.name} ×${it.quantity}`)
-                .join(', ');
-              return (
-                <tr key={id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>#{String(id).slice(-6).toUpperCase()}</div>
-                    <div style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-500)' }}>
-                      {formatDate(o.createdAt)}
-                    </div>
-                    <div style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-600)', marginTop: 4 }}>
-                      {itemSummary}
-                    </div>
-                  </td>
-                  <td>{o.shippingAddress?.fullName || '—'}</td>
-                  <td style={{ fontSize: 'var(--fs-12)' }}>
-                    {o.shippingAddress
-                      ? `${o.shippingAddress.address}, ${o.shippingAddress.city} ${o.shippingAddress.postalCode}, ${o.shippingAddress.country}`
-                      : '—'}
-                  </td>
-                  <td>{Number(o.totalPrice || 0).toFixed(2)} ₺</td>
-                  <td>
-                    <span className={`status-pill status-pill--${o.status}`}>
-                      {STATUS_LABEL[o.status] || o.status}
-                    </span>
-                  </td>
-                  <td>
-                    {next ? (
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        disabled={!!busyIds[id]}
-                        onClick={() => advance(o)}
-                      >
-                        {busyIds[id] ? '...' : (NEXT_LABEL[o.status] || `→ ${STATUS_LABEL[next]}`)}
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-500)' }}>
-                        Completed
-                      </span>
-                    )}
-                    {feedback[id] && (
-                      <div
-                        className={feedback[id].type === 'ok' ? 'order-feedback order-feedback--ok' : 'order-feedback order-feedback--err'}
-                        style={{ marginTop: 6, fontSize: 'var(--fs-12)' }}
-                      >
-                        {feedback[id].text}
+        <div style={{ overflowX: 'auto' }}>
+          <table className="table" style={{ width: '100%', textAlign: 'left', fontSize: 'var(--fs-14)' }}>
+            <thead>
+              <tr style={{ color: 'var(--color-ink-500)', fontWeight: 'var(--fw-medium)' }}>
+                <th style={{ padding: '10px 12px' }}>Order</th>
+                <th style={{ padding: '10px 12px' }}>Customer</th>
+                <th style={{ padding: '10px 12px' }}>Address</th>
+                <th style={{ padding: '10px 12px' }}>Total</th>
+                <th style={{ padding: '10px 12px' }}>Status</th>
+                <th style={{ padding: '10px 12px' }} aria-label="Action"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((o) => {
+                const id = o.id || o._id;
+                const next = nextStatus(o.status);
+                const itemSummary = (o.items || [])
+                  .map((it) => `${it.name} ×${it.quantity}`)
+                  .join(', ');
+                const fb = feedback[id];
+                return (
+                  <tr key={id} style={{ borderTop: '1px solid var(--color-ink-100)' }}>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ fontWeight: 600 }}>#{String(id).slice(-6).toUpperCase()}</div>
+                      <div style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-500)' }}>
+                        {formatDate(o.createdAt)}
                       </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                      {itemSummary && (
+                        <div style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-600)', marginTop: 2 }}>
+                          {itemSummary}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ fontWeight: 600 }}>
+                        {o.buyer?.username || o.shippingAddress?.fullName || '—'}
+                      </div>
+                      {o.buyer?.email && (
+                        <div style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-500)' }}>
+                          {o.buyer.email}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 12px', fontSize: 'var(--fs-12)', color: 'var(--color-ink-600)' }}>
+                      {o.shippingAddress
+                        ? `${o.shippingAddress.address}, ${o.shippingAddress.city} ${o.shippingAddress.postalCode}, ${o.shippingAddress.country}`
+                        : '—'}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>{Number(o.totalPrice || 0).toFixed(2)} ₺</td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <span className={`status-pill status-pill--${o.status}`}>
+                        {STATUS_LABEL[o.status] || o.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      {next ? (
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={smallBtn}
+                          disabled={!!busyIds[id]}
+                          onClick={() => advance(o)}
+                        >
+                          {busyIds[id] ? '...' : (NEXT_LABEL[o.status] || `→ ${STATUS_LABEL[next]}`)}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 'var(--fs-12)', color: 'var(--color-ink-500)' }}>
+                          Completed
+                        </span>
+                      )}
+                      {fb && (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            fontSize: 'var(--fs-12)',
+                            color: fb.type === 'ok' ? 'var(--color-success-700, #15803d)' : 'var(--color-danger-700, #b91c1c)',
+                          }}
+                        >
+                          {fb.text}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

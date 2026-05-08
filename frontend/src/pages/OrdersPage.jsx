@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import AppHeader from '../components/AppHeader';
+import CartSidebar from '../components/CartSidebar';
 import OrderStepper from '../components/OrderStepper';
 import Spinner from '../components/Spinner';
 
@@ -201,6 +202,7 @@ export default function OrdersPage() {
           </div>
         )}
       </main>
+      <CartSidebar />
     </div>
   );
 }

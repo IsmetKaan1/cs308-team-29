@@ -113,7 +113,26 @@ router.get('/', authenticate, requireRole('product_manager'), async (req, res) =
       filter.status = normalized;
     }
     const orders = await Order.find(filter).sort({ createdAt: -1 });
-    res.json(orders);
+
+    const userIds = [...new Set(orders.map((o) => o.userId).filter(Boolean))]
+      .map((id) => {
+        try { return new mongoose.Types.ObjectId(id); } catch { return null; }
+      })
+      .filter(Boolean);
+    const users = await User.find({ _id: { $in: userIds } })
+      .select('email username full_name')
+      .lean();
+    const userMap = Object.fromEntries(users.map((u) => [String(u._id), u]));
+
+    const enriched = orders.map((o) => {
+      const u = userMap[String(o.userId)];
+      const json = o.toJSON();
+      json.buyer = u
+        ? { email: u.email, username: u.username, fullName: u.full_name }
+        : null;
+      return json;
+    });
+    res.json(enriched);
   } catch {
     res.status(500).json({ error: 'Server error' });
   }

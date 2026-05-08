@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import AppHeader from '../components/AppHeader';
+import CartSidebar from '../components/CartSidebar';
 import Spinner from '../components/Spinner';
 
 export default function ProfileSettingsPage() {
@@ -255,6 +256,7 @@ export default function ProfileSettingsPage() {
           </form>
         </div>
       </main>
+      <CartSidebar />
     </div>
   );
 }
