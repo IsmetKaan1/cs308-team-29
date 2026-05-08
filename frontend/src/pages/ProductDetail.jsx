@@ -7,6 +7,7 @@ import CartSidebar from '../components/CartSidebar';
 import Spinner from '../components/Spinner';
 import ProductReviews from '../components/ProductReviews';
 import Stars from '../components/Stars';
+import { productImage } from '../lib/productImage';
 
 const ProductDetail = () => {
   const navigate = useNavigate();
@@ -50,9 +51,15 @@ const ProductDetail = () => {
 
     const availableStock = product.quantityInStock ?? product.stock;
     const isOutOfStock = availableStock != null && availableStock <= 0;
+    const imageSrc = productImage(product.code);
 
     return (
       <div className="detail-card">
+        {imageSrc && (
+          <div className="detail-image">
+            <img src={imageSrc} alt={product.name} />
+          </div>
+        )}
         <span className="product-card-badge">{product.code}</span>
         <h1 className="detail-title">{product.name}</h1>
         {product.reviewCount > 0 && (

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/cartStore';
 import Stars from './Stars';
+import { productImage } from '../lib/productImage';
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
@@ -8,9 +9,15 @@ const ProductCard = ({ product }) => {
   const availableStock = product.quantityInStock ?? product.stock;
   const isOutOfStock = availableStock == null || availableStock <= 0;
   const hasReviews = (product.reviewCount || 0) > 0;
+  const imageSrc = productImage(product.code);
 
   return (
     <article className="product-card">
+      {imageSrc && (
+        <div className="product-card-image">
+          <img src={imageSrc} alt={product.name} loading="lazy" />
+        </div>
+      )}
       <div className="product-card-tags">
         <span className="product-card-badge">{product.code}</span>
         {product.category && (
