@@ -78,6 +78,45 @@ export default function OrdersPage() {
 
   const canUpdateStatus = currentUser?.role === 'product_manager';
 
+  const cancelOrder = async (orderId) => {
+    if (!confirm('Cancel this order? Stock will be released.')) return;
+    setUpdating((u) => ({ ...u, [orderId]: true }));
+    try {
+      const updated = await api.patch(`/api/orders/${orderId}/cancel`, {});
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, ...updated, id: o.id } : o)));
+      setFeedback((f) => ({ ...f, [orderId]: { type: 'ok', text: 'Order cancelled.' } }));
+    } catch (err) {
+      setFeedback((f) => ({ ...f, [orderId]: { type: 'err', text: err.message } }));
+    } finally {
+      setUpdating((u) => ({ ...u, [orderId]: false }));
+    }
+  };
+
+  const requestReturn = async (order, item) => {
+    const qtyRaw = prompt(`Return how many "${item.name}" (max ${item.quantity})?`, '1');
+    if (qtyRaw == null) return;
+    const qty = Number(qtyRaw);
+    if (!Number.isInteger(qty) || qty < 1) {
+      setFeedback((f) => ({ ...f, [order.id]: { type: 'err', text: 'Invalid quantity.' } }));
+      return;
+    }
+    const reason = prompt('Reason (optional):', '') || '';
+    setUpdating((u) => ({ ...u, [order.id]: true }));
+    try {
+      await api.post('/api/returns', {
+        orderId: order.id,
+        orderItemId: item._id || item.id,
+        quantity: qty,
+        reason,
+      });
+      setFeedback((f) => ({ ...f, [order.id]: { type: 'ok', text: 'Return request submitted.' } }));
+    } catch (err) {
+      setFeedback((f) => ({ ...f, [order.id]: { type: 'err', text: err.message } }));
+    } finally {
+      setUpdating((u) => ({ ...u, [order.id]: false }));
+    }
+  };
+
   return (
     <div className="page">
       <AppHeader />
@@ -154,6 +193,16 @@ export default function OrdersPage() {
                           <span className="order-item-price">
                             {(item.price * item.quantity).toFixed(2)} ₺
                           </span>
+                          {order.status === 'delivered' && !canUpdateStatus && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ padding: '2px 8px', fontSize: '0.75rem', marginLeft: 8 }}
+                              onClick={(e) => { e.stopPropagation(); requestReturn(order, item); }}
+                            >
+                              Request return
+                            </button>
+                          )}
                         </div>
                       );
                     })}
@@ -162,6 +211,46 @@ export default function OrdersPage() {
                     <OrderStepper status={order.status} />
                   </div>
                 </div>
+
+                {!canUpdateStatus && order.status === 'processing' && (
+                  <div className="order-update-row">
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      disabled={updating[order.id]}
+                      onClick={() => cancelOrder(order.id)}
+                    >
+                      {updating[order.id] ? '...' : 'Cancel order'}
+                    </button>
+                    {feedback[order.id] && (
+                      <span
+                        className={`order-feedback ${
+                          feedback[order.id].type === 'ok' ? 'order-feedback--ok' : 'order-feedback--err'
+                        }`}
+                      >
+                        {feedback[order.id].text}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {!canUpdateStatus && order.status === 'cancelled' && (
+                  <div className="order-update-row">
+                    <span className="order-feedback order-feedback--err">Cancelled · refund pending</span>
+                  </div>
+                )}
+
+                {!canUpdateStatus && order.status === 'delivered' && feedback[order.id] && (
+                  <div className="order-update-row">
+                    <span
+                      className={`order-feedback ${
+                        feedback[order.id].type === 'ok' ? 'order-feedback--ok' : 'order-feedback--err'
+                      }`}
+                    >
+                      {feedback[order.id].text}
+                    </span>
+                  </div>
+                )}
 
                 {canUpdateStatus && (
                   <div className="order-update-row">

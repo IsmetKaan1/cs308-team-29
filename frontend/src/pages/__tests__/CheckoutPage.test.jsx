@@ -6,7 +6,7 @@ import { CartContext } from '../../context/cartStore';
 
 const { navigateMock, apiMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
-  apiMock: { post: vi.fn() },
+  apiMock: { post: vi.fn(), get: vi.fn().mockResolvedValue({ homeAddress: {} }) },
 }));
 
 vi.mock('react-router-dom', async () => {

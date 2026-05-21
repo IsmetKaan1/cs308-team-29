@@ -7,6 +7,7 @@ import StockPanel from '../components/StockPanel';
 import ProductsAdminPanel from '../components/ProductsAdminPanel';
 import CategoriesPanel from '../components/CategoriesPanel';
 import DeliveriesPanel from '../components/DeliveriesPanel';
+import ReturnsPanel from '../components/ReturnsPanel';
 import AppHeader from '../components/AppHeader';
 
 function formatDate(value) {
@@ -168,6 +169,15 @@ export default function ManagerPage() {
             >
               Deliveries
             </button>
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'returns'}
+              onClick={() => setActiveTab('returns')}
+            >
+              Returns
+            </button>
           </div>
 
           {(activeTab === 'pending' || activeTab === 'rejected') && (
@@ -299,6 +309,10 @@ export default function ManagerPage() {
 
         {activeTab === 'deliveries' && (
           <DeliveriesPanel />
+        )}
+
+        {activeTab === 'returns' && (
+          <ReturnsPanel />
         )}
 
       </main>
