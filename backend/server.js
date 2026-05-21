@@ -19,6 +19,7 @@ const wishlistRoutes = require('./routes/wishlist');
 const salesRoutes = require('./routes/sales');
 const categoryRoutes = require('./routes/categories');
 const deliveryRoutes = require('./routes/deliveries');
+const returnRoutes = require('./routes/returns');
 const seedRoutes = require('./routes/seed');
 const connectMongoDB = require('./mongoDb');
 
@@ -43,6 +44,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/returns', returnRoutes);
 app.use('/api/seed', seedRoutes);
 
 app.use((req, res) => {
