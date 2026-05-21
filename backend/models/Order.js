@@ -8,6 +8,8 @@ const orderItemSchema = new mongoose.Schema({
   code: { type: String, required: true },
   price: { type: Number, required: true },
   quantity: { type: Number, required: true },
+  delivered: { type: Boolean, default: false },
+  deliveredAt: { type: Date, default: null },
 });
 
 const shippingAddressSchema = new mongoose.Schema({
