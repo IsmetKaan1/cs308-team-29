@@ -70,5 +70,6 @@ export const api = {
   get:     (path)       => request(path),
   put:     (path, body) => request(path, { method: 'PUT',   body: JSON.stringify(body) }),
   patch:   (path, body) => request(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  del:     (path)       => request(path, { method: 'DELETE' }),
   getBlob: (path, opts) => requestBlob(path, opts),
 };

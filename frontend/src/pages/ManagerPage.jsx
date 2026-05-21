@@ -28,6 +28,15 @@ function readStoredManagerUser() {
   }
 }
 
+function readStoredRole() {
+  try {
+    const raw = localStorage.getItem('user');
+    return raw ? JSON.parse(raw)?.role : null;
+  } catch {
+    return null;
+  }
+}
+
 // MAIN MANAGER PANEL — only accessible to users with the product_manager role.
 // Redirect to /login if not authenticated or role does not match.
 export default function ManagerPage() {
@@ -44,8 +53,14 @@ export default function ManagerPage() {
   const [feedback, setFeedback] = useState({});
 
   useEffect(() => {
-    if (!hasToken || !authed) {
+    if (!hasToken) {
       navigate('/login', { replace: true });
+      return;
+    }
+    if (!authed) {
+      const role = readStoredRole();
+      if (role === 'sales_manager') navigate('/sales', { replace: true });
+      else navigate('/login', { replace: true });
     }
   }, [hasToken, authed, navigate]);
 

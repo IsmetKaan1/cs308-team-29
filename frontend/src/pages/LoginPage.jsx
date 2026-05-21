@@ -20,7 +20,9 @@ export default function LoginPage() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       window.dispatchEvent(new Event('authChange'));
-      navigate('/');
+      if (data.user?.role === 'product_manager') navigate('/manager');
+      else if (data.user?.role === 'sales_manager') navigate('/sales');
+      else navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {

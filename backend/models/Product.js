@@ -22,6 +22,9 @@ const productSchema = new Schema({
   name: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
+  cost: { type: Number, default: 0, min: 0 },
+  discountRate: { type: Number, default: 0, min: 0, max: 90 },
+  discountStartedAt: { type: Date, default: null },
   category: {
     type: String,
     required: true,
@@ -42,10 +45,23 @@ const productSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+function computeDiscountedPrice(price, rate) {
+  const r = Number(rate) || 0;
+  const p = Number(price) || 0;
+  if (r <= 0) return p;
+  return Math.round((p * (100 - r)) / 100 * 100) / 100;
+}
+
+productSchema.virtual('discountedPrice').get(function () {
+  return computeDiscountedPrice(this.price, this.discountRate);
+});
+
 productSchema.set('toJSON', {
+  virtuals: true,
   transform: (doc, ret) => {
     ret.id = ret._id;
     ret.warrantyStatus = ret.warrantyMonths > 0 ? 'under-warranty' : 'no-warranty';
+    ret.discountedPrice = computeDiscountedPrice(ret.price, ret.discountRate);
     delete ret._id;
     delete ret.__v;
   }
@@ -54,7 +70,9 @@ productSchema.set('toJSON', {
 const Product = mongoose.model('Product', productSchema);
 Product.CATEGORIES = PRODUCT_CATEGORIES;
 Product.DEFAULT_PACKAGE_CONTENTS = DEFAULT_PACKAGE_CONTENTS;
+Product.computeDiscountedPrice = computeDiscountedPrice;
 
 module.exports = Product;
 module.exports.CATEGORIES = PRODUCT_CATEGORIES;
 module.exports.DEFAULT_PACKAGE_CONTENTS = DEFAULT_PACKAGE_CONTENTS;
+module.exports.computeDiscountedPrice = computeDiscountedPrice;

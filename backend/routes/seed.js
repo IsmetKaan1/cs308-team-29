@@ -22,6 +22,20 @@ router.post('/pm', async (req, res) => {
   }
 });
 
+// POST /api/seed/sm — promote a user to sales_manager by email
+router.post('/sm', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'email is required' });
+
+  try {
+    const user = await User.findOneAndUpdate({ email }, { role: 'sales_manager' }, { new: true });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ message: `${user.email} is now a sales_manager`, role: user.role });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // POST /api/seed/orders — seed 3 test orders for a given userId
 router.post('/orders', async (req, res) => {
   const { userId } = req.body;

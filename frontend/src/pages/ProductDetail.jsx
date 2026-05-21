@@ -31,7 +31,10 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    dispatch({ type: 'ADD_ITEM', product });
+    const effectivePrice = Number(product.discountRate) > 0 && product.discountedPrice < product.price
+      ? Number(product.discountedPrice)
+      : Number(product.price);
+    dispatch({ type: 'ADD_ITEM', product: { ...product, price: effectivePrice } });
     setMessage('Item added to cart.');
     setTimeout(() => setMessage(''), 2500);
   };
@@ -74,7 +77,19 @@ const ProductDetail = () => {
         <div className="detail-info-grid">
           <div>
             <span className="detail-info-label">Price</span>
-            <strong className="detail-info-value">{product.price.toFixed(2)} ₺</strong>
+            {Number(product.discountRate) > 0 && product.discountedPrice < product.price ? (
+              <strong className="detail-info-value">
+                <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6, fontSize: '0.85em' }}>
+                  {product.price.toFixed(2)} ₺
+                </span>
+                <span style={{ color: '#e0245e' }}>{Number(product.discountedPrice).toFixed(2)} ₺</span>
+                <span style={{ marginLeft: 8, fontSize: '0.75em', background: '#e0245e', color: '#fff', padding: '2px 6px', borderRadius: 999 }}>
+                  -{product.discountRate}%
+                </span>
+              </strong>
+            ) : (
+              <strong className="detail-info-value">{product.price.toFixed(2)} ₺</strong>
+            )}
           </div>
           <div>
             <span className="detail-info-label">Stock</span>

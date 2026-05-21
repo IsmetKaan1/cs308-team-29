@@ -66,4 +66,33 @@ async function sendInvoiceEmail(toEmail, order, pdfBuffer) {
   }
 }
 
-module.exports = { sendInvoiceEmail, isEmailConfigured };
+async function sendDiscountEmail(toEmail, product, oldPrice, newPrice, discountRate) {
+  const mailTransporter = getTransporter();
+  if (!mailTransporter) {
+    throw new Error('Email service is not configured.');
+  }
+  const subject = `${product.name} is now ${discountRate}% off!`;
+  const text = [
+    `Hello,`,
+    ``,
+    `Good news — a product on your wish list is on sale:`,
+    ``,
+    `  ${product.name} (${product.code})`,
+    `  Was: $${Number(oldPrice).toFixed(2)}`,
+    `  Now: $${Number(newPrice).toFixed(2)}  (-${discountRate}%)`,
+    ``,
+    `Grab it before stock runs out.`,
+    ``,
+    `Best regards,`,
+    `Your Store`,
+  ].join('\n');
+
+  return mailTransporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to: toEmail,
+    subject,
+    text,
+  });
+}
+
+module.exports = { sendInvoiceEmail, sendDiscountEmail, isEmailConfigured };

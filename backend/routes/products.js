@@ -6,9 +6,13 @@ const Order = require('../models/Order');
 const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
 const { computePopularityScore, comparePopularity } = require('../lib/popularity');
+const Wishlist = require('../models/Wishlist');
+const User = require('../models/User');
+const { sendDiscountEmail, isEmailConfigured } = require('../services/emailService');
 
 const router = express.Router();
 const managerOnly = [authenticate, requireRole('product_manager')];
+const salesOnly = [authenticate, requireRole('sales_manager')];
 
 async function aggregateReviewsForProductIds(productIds) {
   if (!productIds.length) return new Map();
@@ -210,6 +214,122 @@ router.patch('/:id/stock', managerOnly, async (req, res) => {
   } catch (error) {
     console.error('Failed to update product stock:', error);
     res.status(500).json({ error: 'Could not update stock.' });
+  }
+});
+
+async function notifyWishlistOfDiscount(product, oldPrice, newPrice, discountRate) {
+  if (!isEmailConfigured()) {
+    return { attempted: 0, sent: 0, skipped: 'email-not-configured' };
+  }
+  const entries = await Wishlist.find({ productId: product._id });
+  if (entries.length === 0) return { attempted: 0, sent: 0 };
+
+  const userIds = [...new Set(entries.map((e) => e.userId))]
+    .map((id) => { try { return new mongoose.Types.ObjectId(id); } catch { return null; } })
+    .filter(Boolean);
+  const users = await User.find({ _id: { $in: userIds } }).select('email');
+
+  let sent = 0;
+  await Promise.all(
+    users.map(async (u) => {
+      if (!u.email) return;
+      try {
+        await sendDiscountEmail(u.email, product, oldPrice, newPrice, discountRate);
+        sent += 1;
+      } catch (err) {
+        console.warn('Discount email failed for', u.email, err.message);
+      }
+    })
+  );
+  return { attempted: users.length, sent };
+}
+
+router.patch('/:id/pricing', salesOnly, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: 'Invalid product id.' });
+  }
+
+  const update = {};
+  if (req.body.price !== undefined) {
+    const price = Number(req.body.price);
+    if (!Number.isFinite(price) || price < 0) {
+      return res.status(400).json({ error: 'Price must be a non-negative number.' });
+    }
+    update.price = price;
+  }
+  if (req.body.cost !== undefined) {
+    const cost = Number(req.body.cost);
+    if (!Number.isFinite(cost) || cost < 0) {
+      return res.status(400).json({ error: 'Cost must be a non-negative number.' });
+    }
+    update.cost = cost;
+  }
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ error: 'No price or cost provided.' });
+  }
+
+  try {
+    const product = await Product.findByIdAndUpdate(id, update, { new: true, runValidators: true });
+    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    res.json(product.toJSON());
+  } catch (err) {
+    console.error('Failed to update pricing:', err);
+    res.status(500).json({ error: 'Could not update pricing.' });
+  }
+});
+
+router.post('/discount', salesOnly, async (req, res) => {
+  const { productIds, discountRate } = req.body || {};
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({ error: 'productIds must be a non-empty array.' });
+  }
+  const rate = Number(discountRate);
+  if (!Number.isFinite(rate) || rate < 0 || rate > 90) {
+    return res.status(400).json({ error: 'discountRate must be between 0 and 90.' });
+  }
+  for (const id of productIds) {
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: `Invalid product id: ${id}` });
+    }
+  }
+
+  try {
+    const products = await Product.find({ _id: { $in: productIds } });
+    if (products.length === 0) {
+      return res.status(404).json({ error: 'No matching products found.' });
+    }
+
+    const results = [];
+    for (const product of products) {
+      const oldRate = product.discountRate || 0;
+      const oldDiscounted = Product.computeDiscountedPrice(product.price, oldRate);
+      const newDiscounted = Product.computeDiscountedPrice(product.price, rate);
+
+      product.discountRate = rate;
+      product.discountStartedAt = rate > 0 ? new Date() : null;
+      await product.save();
+
+      let notify = { attempted: 0, sent: 0 };
+      if (rate > oldRate && rate > 0) {
+        notify = await notifyWishlistOfDiscount(product, oldDiscounted, newDiscounted, rate);
+      }
+
+      results.push({
+        productId: String(product._id),
+        name: product.name,
+        price: product.price,
+        discountRate: rate,
+        discountedPrice: newDiscounted,
+        notified: notify.sent,
+        notifyAttempted: notify.attempted,
+      });
+    }
+
+    res.json({ updated: results.length, discountRate: rate, results });
+  } catch (err) {
+    console.error('Failed to apply discount:', err);
+    res.status(500).json({ error: 'Could not apply discount.' });
   }
 });
 

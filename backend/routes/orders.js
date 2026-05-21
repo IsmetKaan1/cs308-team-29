@@ -182,11 +182,12 @@ router.post('/', authenticate, async (req, res) => {
 
     const orderItems = normalizedItems.items.map((item) => {
       const product = productMap[item.productId];
+      const effectivePrice = Product.computeDiscountedPrice(product.price, product.discountRate);
       return {
         productId: product._id,
         name: product.name,
         code: product.code,
-        price: product.price,
+        price: effectivePrice,
         quantity: item.quantity,
       };
     });

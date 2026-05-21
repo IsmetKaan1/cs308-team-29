@@ -18,6 +18,7 @@ const AppHeader = ({ showNav = true }) => {
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token');
   const user = isLoggedIn ? readStoredUser() : null;
   const isManager = user?.role === 'product_manager';
+  const isSales = user?.role === 'sales_manager';
 
   return (
     <header className="app-header">
@@ -48,24 +49,42 @@ const AppHeader = ({ showNav = true }) => {
               onClick={() => navigate('/manager')}
               aria-current={pathname.startsWith('/manager') ? 'page' : undefined}
             >
-              Admin Panel
+              Product Manager
             </button>
           )}
-          {showNav && isLoggedIn && !isManager && (
+          {showNav && isSales && (
             <button
               className="nav-link"
-              onClick={() => navigate('/orders')}
-              aria-current={pathname === '/orders' ? 'page' : undefined}
+              onClick={() => navigate('/sales')}
+              aria-current={pathname.startsWith('/sales') ? 'page' : undefined}
             >
-              My Orders
+              Sales Manager
             </button>
+          )}
+          {showNav && isLoggedIn && !isManager && !isSales && (
+            <>
+              <button
+                className="nav-link"
+                onClick={() => navigate('/orders')}
+                aria-current={pathname === '/orders' ? 'page' : undefined}
+              >
+                My Orders
+              </button>
+              <button
+                className="nav-link"
+                onClick={() => navigate('/wishlist')}
+                aria-current={pathname === '/wishlist' ? 'page' : undefined}
+              >
+                Wishlist
+              </button>
+            </>
           )}
           {showNav && !isLoggedIn && (
             <button className="nav-link" onClick={() => navigate('/login')}>
               Log In
             </button>
           )}
-          <CartIcon />
+          {!isManager && !isSales && <CartIcon />}
           <ProfileIcon />
         </nav>
       </div>
