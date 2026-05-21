@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const ORDER_STATUSES = ['processing', 'in-transit', 'delivered'];
+const ORDER_STATUSES = ['processing', 'in-transit', 'delivered', 'cancelled'];
 
 const orderItemSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
@@ -46,6 +46,13 @@ const orderSchema = new mongoose.Schema({
   },
   paymentCardLast4: { type: String, default: '' },
   paidAt: { type: Date, default: Date.now },
+  cancelledAt: { type: Date, default: null },
+  cancellationReason: { type: String, default: '' },
+  refundStatus: {
+    type: String,
+    enum: ['none', 'pending', 'refunded'],
+    default: 'none',
+  },
   createdAt: { type: Date, default: Date.now },
 });
 

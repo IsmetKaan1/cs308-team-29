@@ -294,6 +294,44 @@ router.patch('/:id/status', authenticate, requireRole('product_manager'), async 
   }
 });
 
+router.patch('/:id/cancel', authenticate, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: 'Invalid order id.' });
+  }
+  try {
+    const order = await Order.findById(id);
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    if (order.userId !== req.user.id.toString()) {
+      return res.status(403).json({ error: 'You can only cancel your own orders.' });
+    }
+    if (order.status !== 'processing') {
+      return res.status(409).json({
+        error: 'Orders can only be cancelled while they are still being processed.',
+      });
+    }
+
+    const reason = typeof req.body?.reason === 'string'
+      ? req.body.reason.trim().slice(0, 500)
+      : '';
+
+    await releaseStock(
+      order.items.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+    );
+
+    order.status = 'cancelled';
+    order.cancelledAt = new Date();
+    order.cancellationReason = reason;
+    order.refundStatus = 'pending';
+    await order.save();
+
+    res.json(order);
+  } catch (err) {
+    console.error('Failed to cancel order:', err);
+    res.status(500).json({ error: 'Could not cancel the order.' });
+  }
+});
+
 router.get('/:id/invoice', authenticate, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
