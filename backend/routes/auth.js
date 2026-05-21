@@ -12,14 +12,20 @@ function toUserPayload(user) {
     fullName: user.full_name,
     gender: user.gender,
     role: user.role,
+    taxId: user.taxId || '',
+    homeAddress: user.homeAddress || {},
   };
 }
 
 router.post('/register', async (req, res) => {
-  const { email, username, fullName, gender, password } = req.body;
+  const { email, username, fullName, gender, password, taxId, homeAddress } = req.body;
 
   if (!email || !username || !fullName || !gender || !password) {
     return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  if (taxId && !/^[0-9]{10,11}$/.test(String(taxId).trim())) {
+    return res.status(400).json({ error: 'Tax ID must be 10 or 11 digits.' });
   }
 
   try {
@@ -28,7 +34,11 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'Email or username already exists' });
     }
 
-    const user = await User.create({ email, username, full_name: fullName, gender, password });
+    const user = await User.create({
+      email, username, full_name: fullName, gender, password,
+      taxId: taxId ? String(taxId).trim() : '',
+      homeAddress: homeAddress && typeof homeAddress === 'object' ? homeAddress : {},
+    });
     const token = jwt.sign({ id: user._id.toString(), email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: toUserPayload(user) });
   } catch (err) {

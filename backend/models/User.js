@@ -1,14 +1,24 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+const homeAddressSchema = new mongoose.Schema({
+  fullName:   { type: String, default: '' },
+  address:    { type: String, default: '' },
+  city:       { type: String, default: '' },
+  postalCode: { type: String, default: '' },
+  country:    { type: String, default: '' },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
-  email:      { type: String, required: true, unique: true },
-  username:   { type: String, required: true, unique: true },
-  full_name:  { type: String, required: true },
-  gender:     { type: String, required: true },
-  password:   { type: String, required: true },
-  role:       { type: String, enum: ['customer', 'product_manager', 'sales_manager'], default: 'customer' },
-  created_at: { type: Date, default: Date.now }
+  email:       { type: String, required: true, unique: true },
+  username:    { type: String, required: true, unique: true },
+  full_name:   { type: String, required: true },
+  gender:      { type: String, required: true },
+  password:    { type: String, required: true },
+  taxId:       { type: String, default: '', trim: true },
+  homeAddress: { type: homeAddressSchema, default: () => ({}) },
+  role:        { type: String, enum: ['customer', 'product_manager', 'sales_manager'], default: 'customer' },
+  created_at:  { type: Date, default: Date.now }
 });
 
 userSchema.pre('save', async function () {

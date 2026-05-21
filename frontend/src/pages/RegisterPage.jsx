@@ -11,6 +11,10 @@ export default function RegisterPage() {
   const [gender, setGender] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [homeAddress, setHomeAddress] = useState({
+    fullName: '', address: '', city: '', postalCode: '', country: '',
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -31,10 +35,17 @@ export default function RegisterPage() {
 
     if (!isPasswordValid) { setError('Please meet all password requirements.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
+    if (taxId && !/^[0-9]{10,11}$/.test(taxId.trim())) {
+      setError('Tax ID must be 10 or 11 digits.'); return;
+    }
 
     setLoading(true);
     try {
-      const data = await api.post('/api/register', { email, username, fullName, gender, password });
+      const data = await api.post('/api/register', {
+        email, username, fullName, gender, password,
+        taxId: taxId.trim(),
+        homeAddress,
+      });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       navigate('/');
@@ -180,6 +191,46 @@ export default function RegisterPage() {
                 autoComplete="new-password"
               />
             </div>
+
+            <div className="form-group">
+              <label htmlFor="reg-tax">Tax ID (optional)</label>
+              <input
+                id="reg-tax"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{10,11}"
+                className="form-input"
+                value={taxId}
+                onChange={(e) => setTaxId(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="10 or 11 digits"
+              />
+            </div>
+
+            <fieldset className="form-group" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+              <legend style={{ padding: '0 6px', fontSize: '0.85rem', color: '#666' }}>Home address (optional)</legend>
+              <input className="form-input" style={{ marginBottom: 6 }} placeholder="Recipient name"
+                value={homeAddress.fullName}
+                onChange={(e) => setHomeAddress({ ...homeAddress, fullName: e.target.value })}
+              />
+              <input className="form-input" style={{ marginBottom: 6 }} placeholder="Street address"
+                value={homeAddress.address}
+                onChange={(e) => setHomeAddress({ ...homeAddress, address: e.target.value })}
+              />
+              <div className="form-row">
+                <input className="form-input" placeholder="City"
+                  value={homeAddress.city}
+                  onChange={(e) => setHomeAddress({ ...homeAddress, city: e.target.value })}
+                />
+                <input className="form-input" placeholder="Postal code"
+                  value={homeAddress.postalCode}
+                  onChange={(e) => setHomeAddress({ ...homeAddress, postalCode: e.target.value })}
+                />
+              </div>
+              <input className="form-input" style={{ marginTop: 6 }} placeholder="Country"
+                value={homeAddress.country}
+                onChange={(e) => setHomeAddress({ ...homeAddress, country: e.target.value })}
+              />
+            </fieldset>
 
             <div className="btn-row">
               <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>

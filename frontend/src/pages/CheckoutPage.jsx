@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/cartStore';
 import { api } from '../api';
@@ -43,6 +43,19 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const isGuest = !localStorage.getItem('token');
+
+  useEffect(() => {
+    if (isGuest) return;
+    api.get('/api/profile').then((data) => {
+      const a = data.homeAddress || {};
+      if (a.fullName && !fullName) setFullName(a.fullName);
+      if (a.address && !address) setAddress(a.address);
+      if (a.city && !city) setCity(a.city);
+      if (a.postalCode && !postalCode) setPostalCode(a.postalCode);
+      if (a.country && !country) setCountry(a.country);
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isGuest) {
     return (

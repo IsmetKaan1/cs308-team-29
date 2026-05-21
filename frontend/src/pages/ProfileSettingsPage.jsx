@@ -11,6 +11,10 @@ export default function ProfileSettingsPage() {
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [gender, setGender] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [homeAddress, setHomeAddress] = useState({
+    fullName: '', address: '', city: '', postalCode: '', country: '',
+  });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -36,6 +40,14 @@ export default function ProfileSettingsPage() {
         setUsername(data.username);
         setFullName(data.fullName);
         setGender(data.gender);
+        setTaxId(data.taxId || '');
+        setHomeAddress({
+          fullName: data.homeAddress?.fullName || '',
+          address: data.homeAddress?.address || '',
+          city: data.homeAddress?.city || '',
+          postalCode: data.homeAddress?.postalCode || '',
+          country: data.homeAddress?.country || '',
+        });
       })
       .catch(() => {
         localStorage.removeItem('token');
@@ -49,8 +61,17 @@ export default function ProfileSettingsPage() {
     setError('');
     setMessage('');
     setSaving(true);
+    if (taxId && !/^[0-9]{10,11}$/.test(taxId.trim())) {
+      setError('Tax ID must be 10 or 11 digits.');
+      setSaving(false);
+      return;
+    }
     try {
-      const data = await api.put('/api/profile', { username, fullName, gender });
+      const data = await api.put('/api/profile', {
+        username, fullName, gender,
+        taxId: taxId.trim(),
+        homeAddress,
+      });
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data));
       setMessage('Profile updated successfully.');
@@ -197,6 +218,46 @@ export default function ProfileSettingsPage() {
               <label htmlFor="ps-email">Email</label>
               <input id="ps-email" type="email" className="form-input" value={user.email} disabled />
             </div>
+
+            <div className="form-group">
+              <label htmlFor="ps-tax">Tax ID</label>
+              <input
+                id="ps-tax"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{10,11}"
+                className="form-input"
+                value={taxId}
+                onChange={(e) => setTaxId(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="10 or 11 digits"
+              />
+            </div>
+
+            <fieldset className="form-group" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+              <legend style={{ padding: '0 6px', fontSize: '0.85rem', color: 'var(--color-ink-500)' }}>Home address</legend>
+              <input className="form-input" style={{ marginBottom: 6 }} placeholder="Recipient name"
+                value={homeAddress.fullName}
+                onChange={(e) => setHomeAddress({ ...homeAddress, fullName: e.target.value })}
+              />
+              <input className="form-input" style={{ marginBottom: 6 }} placeholder="Street address"
+                value={homeAddress.address}
+                onChange={(e) => setHomeAddress({ ...homeAddress, address: e.target.value })}
+              />
+              <div className="form-row">
+                <input className="form-input" placeholder="City"
+                  value={homeAddress.city}
+                  onChange={(e) => setHomeAddress({ ...homeAddress, city: e.target.value })}
+                />
+                <input className="form-input" placeholder="Postal code"
+                  value={homeAddress.postalCode}
+                  onChange={(e) => setHomeAddress({ ...homeAddress, postalCode: e.target.value })}
+                />
+              </div>
+              <input className="form-input" style={{ marginTop: 6 }} placeholder="Country"
+                value={homeAddress.country}
+                onChange={(e) => setHomeAddress({ ...homeAddress, country: e.target.value })}
+              />
+            </fieldset>
 
             <button type="submit" className="btn btn-primary btn-lg" disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
