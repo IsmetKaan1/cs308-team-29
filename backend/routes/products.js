@@ -8,7 +8,14 @@ const requireRole = require('../middleware/roleGuard');
 const { computePopularityScore, comparePopularity } = require('../lib/popularity');
 const Wishlist = require('../models/Wishlist');
 const User = require('../models/User');
+const Category = require('../models/Category');
 const { sendDiscountEmail, isEmailConfigured } = require('../services/emailService');
+
+async function validCategoryName(name) {
+  if (!name) return false;
+  const found = await Category.findOne({ name: String(name).trim() });
+  return !!found;
+}
 
 const router = express.Router();
 const managerOnly = [authenticate, requireRole('product_manager')];
@@ -101,10 +108,7 @@ function buildProductFilter(query) {
   const filter = {};
 
   if (category && category !== 'all') {
-    if (!Product.CATEGORIES.includes(category)) {
-      return { error: 'Invalid category.' };
-    }
-    filter.category = category;
+    filter.category = String(category);
   }
 
   if (q && String(q).trim()) {
@@ -155,8 +159,14 @@ async function loadProductsWithAggregates(filter, sort) {
   return sortProducts(enriched, sort);
 }
 
-router.get('/categories', (req, res) => {
-  res.json(Product.CATEGORIES);
+router.get('/categories', async (_req, res) => {
+  try {
+    const cats = await Category.find().sort({ name: 1 });
+    res.json(cats.map((c) => c.name));
+  } catch (err) {
+    console.error('Failed to load categories:', err);
+    res.status(500).json({ error: 'Could not load categories.' });
+  }
 });
 
 router.get('/', async (req, res) => {
@@ -359,13 +369,17 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', managerOnly, async (req, res) => {
   const {
-    code, name, description, price, category,
+    code, name, description, price, cost, category,
     serialNumber, quantityInStock, warrantyMonths, distributorInfo, model,
   } = req.body;
 
   const missing = [];
+  if (!code) missing.push('code');
+  if (!name) missing.push('name');
+  if (!description) missing.push('description');
+  if (price === undefined || price === null || Number.isNaN(Number(price))) missing.push('price');
   if (serialNumber === undefined || serialNumber === null || serialNumber === '') missing.push('serialNumber');
   if (quantityInStock === undefined || quantityInStock === null) missing.push('quantityInStock');
   if (category === undefined || category === null || category === '') missing.push('category');
@@ -376,11 +390,18 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: `Missing required field(s): ${missing.join(', ')}` });
   }
 
+  if (!(await validCategoryName(category))) {
+    return res.status(400).json({ error: `Unknown category: ${category}. Create it first.` });
+  }
+
   try {
     const product = await Product.create({
-      code, name, description, price, category,
-      serialNumber, quantityInStock,
-      warrantyMonths, distributorInfo, model,
+      code, name, description,
+      price: Number(price),
+      cost: cost !== undefined ? Number(cost) : 0,
+      category: String(category).trim(),
+      serialNumber, quantityInStock: Number(quantityInStock),
+      warrantyMonths: Number(warrantyMonths), distributorInfo, model,
     });
     res.status(201).json(product);
   } catch (error) {
@@ -389,6 +410,64 @@ router.post('/', async (req, res) => {
     }
     console.error('Failed to create product:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+const PATCH_ALLOWED_FIELDS = [
+  'code', 'name', 'description', 'category', 'serialNumber',
+  'warrantyMonths', 'distributorInfo', 'model', 'packageContents',
+];
+
+router.patch('/:id', managerOnly, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: 'Invalid product id.' });
+  }
+
+  const update = {};
+  for (const field of PATCH_ALLOWED_FIELDS) {
+    if (req.body[field] !== undefined) update[field] = req.body[field];
+  }
+
+  if (update.category !== undefined) {
+    if (!(await validCategoryName(update.category))) {
+      return res.status(400).json({ error: `Unknown category: ${update.category}.` });
+    }
+    update.category = String(update.category).trim();
+  }
+
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ error: 'No editable fields provided.' });
+  }
+
+  try {
+    const product = await Product.findByIdAndUpdate(id, update, { new: true, runValidators: true });
+    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    res.json(product.toJSON());
+  } catch (err) {
+    if (err.name === 'ValidationError' || err.code === 11000) {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error('Failed to update product:', err);
+    res.status(500).json({ error: 'Could not update product.' });
+  }
+});
+
+router.delete('/:id', managerOnly, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: 'Invalid product id.' });
+  }
+  try {
+    const product = await Product.findByIdAndDelete(id);
+    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    await Promise.all([
+      Wishlist.deleteMany({ productId: product._id }),
+    ]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to delete product:', err);
+    res.status(500).json({ error: 'Could not delete product.' });
   }
 });
 
