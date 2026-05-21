@@ -119,9 +119,9 @@ describe('Product schema', () => {
     expect(p.validateSync().errors.category).toBeDefined();
   });
 
-  test('rejects category value outside the allowed enum', () => {
+  test('accepts any non-empty category string (dynamic validation at the route layer)', () => {
     const p = new Product(baseProductData({ category: 'Totally Not A Category' }));
-    expect(p.validateSync().errors.category).toBeDefined();
+    expect(p.validateSync()?.errors?.category).toBeUndefined();
   });
 
   test('exposes the canonical category list on the model', () => {

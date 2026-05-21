@@ -28,7 +28,7 @@ const productSchema = new Schema({
   category: {
     type: String,
     required: true,
-    enum: PRODUCT_CATEGORIES,
+    trim: true,
     index: true,
   },
   stock: { type: Number, default: null },
