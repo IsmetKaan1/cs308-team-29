@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
+const Category = require('./models/Category');
 
 const connectDB = async () => {
   try {
@@ -72,6 +73,16 @@ const connectDB = async () => {
       { $or: [{ packageContents: { $exists: false } }, { packageContents: { $size: 0 } }] },
       { $set: { packageContents: Product.DEFAULT_PACKAGE_CONTENTS } }
     );
+
+    // Seed categories from the legacy enum constant if none exist yet
+    const categoryCount = await Category.countDocuments();
+    if (categoryCount === 0) {
+      const seed = Product.CATEGORIES || [];
+      if (seed.length) {
+        await Category.insertMany(seed.map((name) => ({ name })));
+        console.log(`Seeded ${seed.length} categories.`);
+      }
+    }
 
     await Promise.all([
       Order.updateMany({ status: 'Processing' }, { $set: { status: 'processing' } }),

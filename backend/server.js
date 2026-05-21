@@ -17,6 +17,7 @@ const paymentRoutes = require('./routes/payments');
 const { productReviewsRouter, reviewsRouter } = require('./routes/reviews');
 const wishlistRoutes = require('./routes/wishlist');
 const salesRoutes = require('./routes/sales');
+const categoryRoutes = require('./routes/categories');
 const seedRoutes = require('./routes/seed');
 const connectMongoDB = require('./mongoDb');
 
@@ -39,6 +40,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/seed', seedRoutes);
 
 app.use((req, res) => {
