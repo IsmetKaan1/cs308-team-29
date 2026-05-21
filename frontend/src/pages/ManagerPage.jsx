@@ -4,7 +4,9 @@ import { api } from '../api';
 import Spinner from '../components/Spinner';
 import Stars from '../components/Stars';
 import StockPanel from '../components/StockPanel';
-import ShipmentsPanel from '../components/ShipmentsPanel';
+import ProductsAdminPanel from '../components/ProductsAdminPanel';
+import CategoriesPanel from '../components/CategoriesPanel';
+import DeliveriesPanel from '../components/DeliveriesPanel';
 import AppHeader from '../components/AppHeader';
 
 function formatDate(value) {
@@ -134,19 +136,37 @@ export default function ManagerPage() {
               type="button"
               role="tab"
               className="category-tab"
-              aria-pressed={activeTab === 'stock'}
-              onClick={() => setActiveTab('stock')}
+              aria-pressed={activeTab === 'products'}
+              onClick={() => setActiveTab('products')}
             >
-              Stock Management
+              Products
             </button>
             <button
               type="button"
               role="tab"
               className="category-tab"
-              aria-pressed={activeTab === 'shipments'}
-              onClick={() => setActiveTab('shipments')}
+              aria-pressed={activeTab === 'categories'}
+              onClick={() => setActiveTab('categories')}
             >
-              Shipments
+              Categories
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'stock'}
+              onClick={() => setActiveTab('stock')}
+            >
+              Stock
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'deliveries'}
+              onClick={() => setActiveTab('deliveries')}
+            >
+              Deliveries
             </button>
           </div>
 
@@ -265,12 +285,20 @@ export default function ManagerPage() {
         )}
 
 
+        {activeTab === 'products' && (
+          <ProductsAdminPanel />
+        )}
+
+        {activeTab === 'categories' && (
+          <CategoriesPanel />
+        )}
+
         {activeTab === 'stock' && (
           <StockPanel />
         )}
 
-        {activeTab === 'shipments' && (
-          <ShipmentsPanel />
+        {activeTab === 'deliveries' && (
+          <DeliveriesPanel />
         )}
 
       </main>
