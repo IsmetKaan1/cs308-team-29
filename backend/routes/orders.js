@@ -1,3 +1,10 @@
+/**
+ * Order routes. Checkout references payment by transactionId only.
+ *
+ * cardNumber and cvv must never be accepted, logged, or stored on orders.
+ * Do not log req.body here — it may contain shipping PII; payment card
+ * fields belong only on /api/payments and are redacted in req.safeBody there.
+ */
 const express = require('express');
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
@@ -204,6 +211,7 @@ router.post('/', authenticate, async (req, res) => {
     });
     if (!payment.ok) {
       await releaseStock(reservation.reserved);
+      // Fixed store messages only — never echo card numbers or CVV.
       return res.status(402).json({ error: payment.error });
     }
 
@@ -275,7 +283,7 @@ router.post('/', authenticate, async (req, res) => {
     if (err.name === 'CastError') {
       return res.status(400).json({ error: 'One or more cart items are invalid.' });
     }
-    console.error('Failed to create order:', err);
+    console.error('Failed to create order:', err.message);
     res.status(500).json({ error: 'Could not place the order. Please try again.' });
   }
 });
@@ -327,7 +335,7 @@ router.patch('/:id/cancel', authenticate, async (req, res) => {
 
     res.json(order);
   } catch (err) {
-    console.error('Failed to cancel order:', err);
+    console.error('Failed to cancel order:', err.message);
     res.status(500).json({ error: 'Could not cancel the order.' });
   }
 });
@@ -349,7 +357,7 @@ router.get('/:id/invoice', authenticate, async (req, res) => {
     res.setHeader('Content-Disposition', `inline; filename="invoice_${order._id}.pdf"`);
     res.send(pdfBuffer);
   } catch (err) {
-    console.error('Error generating invoice PDF:', err);
+    console.error('Error generating invoice PDF:', err.message);
     res.status(500).json({ error: 'Could not generate invoice' });
   }
 });
@@ -384,7 +392,7 @@ router.post('/:id/invoice/resend', authenticate, async (req, res) => {
 
     res.json({ message: 'Invoice sent.', email: user.email });
   } catch (err) {
-    console.error('Error resending invoice for order', req.params.id, ':', err);
+    console.error('Error resending invoice for order', req.params.id, ':', err.message);
     res.status(500).json({ error: 'Could not resend the invoice. Please try again later.' });
   }
 });
