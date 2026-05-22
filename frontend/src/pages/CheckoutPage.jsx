@@ -22,6 +22,21 @@ function formatCvv(value) {
   return value.replace(/\D+/g, '').slice(0, 3);
 }
 
+/** Normalize raw payment fields before client validation and API submission. */
+export function normalizePaymentInputs({
+  cardHolder = '',
+  cardNumber = '',
+  expiry = '',
+  cvv = '',
+} = {}) {
+  return {
+    cardHolderName: cardHolder.trim(),
+    cardNumber: cardNumber.replace(/\D+/g, ''),
+    expiry: expiry.trim(),
+    cvv: cvv.replace(/\D+/g, ''),
+  };
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { state, dispatch } = useCart();
@@ -114,13 +129,15 @@ export default function CheckoutPage() {
     e.preventDefault();
     setPaymentError('');
 
-    const digits = cardNumber.replace(/\D+/g, '');
-    const cardHolderName = cardHolder.trim();
-    const expiryValue = expiry;
-    const cvvValue = cvv;
+    const {
+      cardHolderName,
+      cardNumber: cardDigits,
+      expiry: expiryValue,
+      cvv: cvvValue,
+    } = normalizePaymentInputs({ cardHolder, cardNumber, expiry, cvv });
 
     if (!cardHolderName) { setPaymentError('Cardholder name is required.'); return; }
-    if (digits.length !== 16) { setPaymentError('Card number must be 16 digits.'); return; }
+    if (cardDigits.length !== 16) { setPaymentError('Card number must be 16 digits.'); return; }
     if (!/^\d{2}\/\d{2}$/.test(expiryValue)) { setPaymentError('Expiry must be in MM/YY format.'); return; }
     if (cvvValue.length !== 3) { setPaymentError('CVV must be 3 digits.'); return; }
 
@@ -128,7 +145,7 @@ export default function CheckoutPage() {
     try {
       const payment = await api.post('/api/payments/mock', {
         cardHolderName,
-        cardNumber: digits,
+        cardNumber: cardDigits,
         expiry: expiryValue,
         cvv: cvvValue,
       });

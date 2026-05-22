@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import CheckoutPage from '../CheckoutPage';
+import CheckoutPage, { normalizePaymentInputs } from '../CheckoutPage';
 import { CartContext } from '../../context/cartStore';
 
 const { navigateMock, apiMock } = vi.hoisted(() => ({
@@ -59,6 +59,22 @@ function fillPayment({ cardNumber = '4242 4242 4242 4242', expiry = '12/30', cvv
   // because the shipping step is unmounted.
   fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'Test User' } });
 }
+
+describe('normalizePaymentInputs', () => {
+  test('trims cardholder, strips card/cvv non-digits, and trims expiry whitespace', () => {
+    expect(normalizePaymentInputs({
+      cardHolder: '  Test User  ',
+      cardNumber: '4242-4242-4242-4242',
+      expiry: ' 12/30 ',
+      cvv: '1 2 3',
+    })).toEqual({
+      cardHolderName: 'Test User',
+      cardNumber: '4242424242424242',
+      expiry: '12/30',
+      cvv: '123',
+    });
+  });
+});
 
 describe('CheckoutPage', () => {
   beforeEach(() => {
