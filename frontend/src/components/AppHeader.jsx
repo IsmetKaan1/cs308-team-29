@@ -55,7 +55,7 @@ const AppHeader = ({ showNav = true }) => {
           {showNav && isSales && (
             <button
               className="nav-link"
-              onClick={() => navigate('/sales')}
+              onClick={() => navigate('/sales-manager/dashboard')}
               aria-current={pathname.startsWith('/sales') ? 'page' : undefined}
             >
               Sales Manager

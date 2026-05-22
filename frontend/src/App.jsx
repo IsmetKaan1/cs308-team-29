@@ -10,6 +10,7 @@ import ProductDetail from './pages/ProductDetail';
 import OrdersPage from './pages/OrdersPage';
 import ManagerPage from './pages/ManagerPage';
 import SalesManagerPage from './pages/SalesManagerPage';
+import SalesManagerDashboard from './pages/SalesManagerDashboard';
 import WishlistPage from './pages/WishlistPage';
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/manager" element={<ManagerPage />} />
           <Route path="/sales" element={<SalesManagerPage />} />
+          <Route path="/sales-manager/dashboard" element={<SalesManagerDashboard />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

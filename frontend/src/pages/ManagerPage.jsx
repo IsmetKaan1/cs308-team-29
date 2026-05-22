@@ -62,7 +62,7 @@ export default function ManagerPage() {
     }
     if (!authed) {
       const role = readStoredRole();
-      if (role === 'sales_manager') navigate('/sales', { replace: true });
+      if (role === 'sales_manager') navigate('/sales-manager/dashboard', { replace: true });
       else navigate('/login', { replace: true });
     }
   }, [hasToken, authed, navigate]);

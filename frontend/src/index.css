@@ -1342,6 +1342,253 @@ input, select, textarea {
 }
 
 /* ========================================================================
+   SALES MANAGER DASHBOARD
+   ======================================================================== */
+.sales-dashboard-toolbar {
+  display: grid;
+  grid-template-columns: minmax(150px, 180px) minmax(150px, 180px) 1fr auto;
+  gap: var(--space-3);
+  align-items: end;
+  background: var(--color-white);
+  border: 1px solid var(--color-ink-200);
+  border-radius: 8px;
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-xs);
+}
+
+.sales-dashboard-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-ink-600);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+}
+
+.sales-dashboard-toolbar input {
+  height: 42px;
+  border: 1px solid var(--color-ink-300);
+  border-radius: 8px;
+  padding: 0 var(--space-3);
+  color: var(--color-ink-800);
+  background: var(--color-white);
+}
+
+.sales-dashboard-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sales-dashboard-presets .btn,
+.sales-dashboard-table-actions .btn {
+  padding: 9px 12px;
+  font-size: var(--fs-13);
+}
+
+.sales-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.sales-summary-card {
+  min-height: 112px;
+  background: var(--color-white);
+  border: 1px solid var(--color-ink-200);
+  border-radius: 8px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-xs);
+}
+
+.sales-summary-card span {
+  color: var(--color-ink-500);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+}
+
+.sales-summary-card strong {
+  color: var(--color-ink-900);
+  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.sales-summary-card--positive strong { color: var(--color-success-700); }
+.sales-summary-card--negative strong { color: var(--color-danger-700); }
+
+.sales-dashboard-section {
+  background: var(--color-white);
+  border: 1px solid var(--color-ink-200);
+  border-radius: 8px;
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-xs);
+}
+
+.sales-dashboard-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.sales-dashboard-section-head h2 {
+  font-size: var(--fs-20);
+}
+
+.sales-dashboard-section-head span {
+  color: var(--color-ink-500);
+  font-size: var(--fs-13);
+}
+
+.sales-chart-frame {
+  position: relative;
+  height: 420px;
+  min-height: 320px;
+}
+
+.sales-dashboard-empty {
+  border-radius: 8px;
+  padding: var(--space-7) var(--space-5);
+}
+
+.sales-dashboard-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sales-dashboard-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.sales-dashboard-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: var(--fs-14);
+}
+
+.sales-dashboard-table th,
+.sales-dashboard-table td {
+  padding: var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-ink-200);
+  vertical-align: middle;
+}
+
+.sales-dashboard-table th {
+  color: var(--color-ink-600);
+  background: var(--color-ink-50);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+}
+
+.sales-dashboard-table td strong {
+  display: block;
+  color: var(--color-ink-900);
+}
+
+.sales-dashboard-table td span {
+  display: block;
+  color: var(--color-ink-500);
+  font-size: var(--fs-12);
+}
+
+.sales-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink-100);
+  color: var(--color-ink-700);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-semibold);
+  text-transform: capitalize;
+}
+
+.sales-status--delivered,
+.sales-status--completed {
+  background: var(--color-success-100);
+  color: var(--color-success-700);
+}
+
+.sales-status--cancelled {
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+}
+
+.sales-status--processing,
+.sales-status--in-transit {
+  background: var(--color-warning-50);
+  color: #92400e;
+}
+
+@media (max-width: 900px) {
+  .sales-dashboard-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales-dashboard-presets {
+    grid-column: 1 / -1;
+  }
+
+  .sales-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .sales-dashboard-toolbar,
+  .sales-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-dashboard-toolbar .btn-primary {
+    width: 100%;
+  }
+
+  .sales-dashboard-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sales-dashboard-table-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media print {
+  .sales-dashboard-toolbar,
+  .app-header,
+  .sales-dashboard-table-actions .btn {
+    display: none !important;
+  }
+
+  .page-body {
+    padding: 0;
+  }
+
+  .sales-dashboard-section,
+  .sales-summary-card {
+    box-shadow: none;
+  }
+}
+
+/* ========================================================================
    CHECKOUT PAGE
    ======================================================================== */
 .checkout-layout {
@@ -2113,4 +2360,3 @@ input, select, textarea {
   object-fit: contain;
   display: block;
 }
-
