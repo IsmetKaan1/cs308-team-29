@@ -22,6 +22,13 @@ function formatCvv(value) {
   return value.replace(/\D+/g, '').slice(0, 3);
 }
 
+function createIdempotencyKey() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { state, dispatch } = useCart();
@@ -41,6 +48,7 @@ export default function CheckoutPage() {
   const [cvv, setCvv] = useState('');
   const [paymentError, setPaymentError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState(() => createIdempotencyKey());
 
   const isGuest = !localStorage.getItem('token');
 
@@ -100,6 +108,7 @@ export default function CheckoutPage() {
       setShippingError('Please fill in all shipping address fields.');
       return;
     }
+    setIdempotencyKey(createIdempotencyKey());
     setStep(STEP_PAYMENT);
   }
 
@@ -124,6 +133,7 @@ export default function CheckoutPage() {
 
       if (!payment.approved) {
         setPaymentError(payment.error || 'Payment declined. Please try a different card.');
+        setIdempotencyKey(createIdempotencyKey());
         return;
       }
 
@@ -131,11 +141,15 @@ export default function CheckoutPage() {
         items: state.items,
         shippingAddress: shippingAddressObject(),
         paymentTransactionId: payment.transactionId,
+      }, {
+        headers: { 'Idempotency-Key': idempotencyKey },
       });
+      setIdempotencyKey(createIdempotencyKey());
       dispatch({ type: 'CLEAR_CART' });
       navigate('/order-confirmation', { state: { order } });
     } catch (err) {
       setPaymentError(err.message || 'An error occurred during payment.');
+      setIdempotencyKey(createIdempotencyKey());
     } finally {
       setSubmitting(false);
     }

@@ -4,9 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import CheckoutPage from '../CheckoutPage';
 import { CartContext } from '../../context/cartStore';
 
-const { navigateMock, apiMock } = vi.hoisted(() => ({
+const { navigateMock, apiMock, randomUUIDMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   apiMock: { post: vi.fn(), get: vi.fn().mockResolvedValue({ homeAddress: {} }) },
+  randomUUIDMock: vi.fn(),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -64,11 +65,18 @@ describe('CheckoutPage', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     apiMock.post.mockReset();
+    randomUUIDMock.mockReset();
+    randomUUIDMock
+      .mockReturnValueOnce('initial-key')
+      .mockReturnValueOnce('payment-step-key')
+      .mockReturnValue('reset-key');
+    vi.stubGlobal('crypto', { randomUUID: randomUUIDMock });
     localStorage.removeItem('token');
   });
 
   afterEach(() => {
     localStorage.removeItem('token');
+    vi.unstubAllGlobals();
   });
 
   test('shows guest gate with login button when no token present', () => {
@@ -142,17 +150,24 @@ describe('CheckoutPage', () => {
     });
 
     await waitFor(() => {
-      expect(apiMock.post).toHaveBeenNthCalledWith(2, '/api/orders', expect.objectContaining({
-        items,
-        shippingAddress: {
-          fullName: 'Test User',
-          address: '123 Demo',
-          city: 'Istanbul',
-          postalCode: '34000',
-          country: 'Turkey',
-        },
-        paymentTransactionId: 'TXN-TEST',
-      }));
+      expect(apiMock.post).toHaveBeenNthCalledWith(
+        2,
+        '/api/orders',
+        expect.objectContaining({
+          items,
+          shippingAddress: {
+            fullName: 'Test User',
+            address: '123 Demo',
+            city: 'Istanbul',
+            postalCode: '34000',
+            country: 'Turkey',
+          },
+          paymentTransactionId: 'TXN-TEST',
+        }),
+        expect.objectContaining({
+          headers: { 'Idempotency-Key': 'payment-step-key' },
+        })
+      );
     });
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'CLEAR_CART' });
@@ -178,6 +193,60 @@ describe('CheckoutPage', () => {
 
     expect(apiMock.post).toHaveBeenCalledTimes(1);
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  test('includes Idempotency-Key header when placing order', async () => {
+    apiMock.post
+      .mockResolvedValueOnce({ approved: true, transactionId: 'TXN-TEST' })
+      .mockResolvedValueOnce({ id: 'o1', status: 'processing' });
+
+    const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
+    renderCheckout({ items, totalPrice: 100 });
+
+    goToPaymentStep();
+    fillPayment();
+    fireEvent.click(screen.getByRole('button', { name: /Place Order/i }));
+
+    await waitFor(() => {
+      expect(apiMock.post).toHaveBeenNthCalledWith(
+        2,
+        '/api/orders',
+        expect.any(Object),
+        expect.objectContaining({
+          headers: { 'Idempotency-Key': 'payment-step-key' },
+        })
+      );
+    });
+  });
+
+  test('generates a new idempotency key after order success', async () => {
+    apiMock.post
+      .mockResolvedValueOnce({ approved: true, transactionId: 'TXN-TEST' })
+      .mockResolvedValueOnce({ id: 'o1', status: 'processing' });
+
+    const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
+    renderCheckout({ items, totalPrice: 100 });
+
+    goToPaymentStep();
+    fillPayment();
+    fireEvent.click(screen.getByRole('button', { name: /Place Order/i }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith(
+        '/order-confirmation',
+        expect.objectContaining({ state: expect.any(Object) })
+      );
+    });
+
+    expect(randomUUIDMock).toHaveBeenCalledTimes(3);
+    expect(apiMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/api/orders',
+      expect.any(Object),
+      expect.objectContaining({
+        headers: { 'Idempotency-Key': 'payment-step-key' },
+      })
+    );
   });
 
   test('validates payment fields client-side before calling the API', () => {

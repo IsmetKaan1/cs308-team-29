@@ -66,7 +66,11 @@ async function requestBlob(path, { accept } = {}) {
 }
 
 export const api = {
-  post:    (path, body) => request(path, { method: 'POST',  body: JSON.stringify(body) }),
+  post:    (path, body, options = {}) => request(path, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: options.headers,
+  }),
   get:     (path)       => request(path),
   put:     (path, body) => request(path, { method: 'PUT',   body: JSON.stringify(body) }),
   patch:   (path, body) => request(path, { method: 'PATCH', body: JSON.stringify(body) }),
