@@ -36,4 +36,13 @@ describe('paymentStore.consumeTransaction', () => {
       error: expect.stringMatching(/does not belong/i),
     });
   });
+
+  test('rejects consumption when expectedAmount mismatches record amount', () => {
+    registerTransaction('TXN-3', { userId: 'u1', amount: 100 });
+    const r = consumeTransaction('TXN-3', { userId: 'u1', expectedAmount: 150 });
+    expect(r).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/amount does not match/i),
+    });
+  });
 });

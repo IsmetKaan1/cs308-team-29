@@ -22,6 +22,7 @@ router.post('/mock', authenticate, (req, res) => {
     userId: req.user.id.toString(),
     approvedAt: result.approvedAt,
     cardLast4: result.cardLast4,
+    amount: req.body.amount,
   });
 
   res.json({

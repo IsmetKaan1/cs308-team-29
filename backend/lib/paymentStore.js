@@ -14,7 +14,7 @@ function registerTransaction(transactionId, meta = {}) {
   approvedTransactions.set(transactionId, meta);
 }
 
-function consumeTransaction(transactionId, { userId } = {}) {
+function consumeTransaction(transactionId, { userId, expectedAmount } = {}) {
   if (!transactionId || typeof transactionId !== 'string') {
     return { ok: false, error: 'Payment transaction is required.' };
   }
@@ -26,6 +26,12 @@ function consumeTransaction(transactionId, { userId } = {}) {
 
   if (userId && record.userId && record.userId !== userId) {
     return { ok: false, error: 'Payment transaction does not belong to this user.' };
+  }
+
+  if (expectedAmount !== undefined && record.amount !== undefined) {
+    if (Math.abs(record.amount - expectedAmount) > 0.01) {
+      return { ok: false, error: 'Payment amount does not match order total.' };
+    }
   }
 
   approvedTransactions.delete(transactionId);

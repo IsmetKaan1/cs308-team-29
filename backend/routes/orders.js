@@ -203,6 +203,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const payment = consumeTransaction(paymentTransactionId, {
       userId: req.user.id.toString(),
+      expectedAmount: totalPrice,
     });
     if (!payment.ok) {
       await releaseStock(reservation.reserved);
