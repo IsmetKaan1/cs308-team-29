@@ -129,6 +129,7 @@ export default function CheckoutPage() {
         cardNumber: digits,
         expiry,
         cvv,
+        amount: state.totalPrice,
       });
 
       if (!payment.approved) {
@@ -148,7 +149,11 @@ export default function CheckoutPage() {
       dispatch({ type: 'CLEAR_CART' });
       navigate('/order-confirmation', { state: { order } });
     } catch (err) {
-      setPaymentError(err.message || 'An error occurred during payment.');
+      if (err.status === 402) {
+        setPaymentError('Payment total changed. Please review your cart and try again.');
+      } else {
+        setPaymentError(err.message || 'An error occurred during payment.');
+      }
       setIdempotencyKey(createIdempotencyKey());
     } finally {
       setSubmitting(false);

@@ -28,7 +28,9 @@ async function request(path, options = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(data?.error || `Request failed (${res.status}). Please try again.`);
+    const err = new Error(data?.error || `Request failed (${res.status}). Please try again.`);
+    err.status = res.status;
+    throw err;
   }
 
   if (text && !data) {
