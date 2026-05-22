@@ -1,4 +1,40 @@
-const { validatePaymentInput, authorizePayment } = require('../mockBank');
+jest.mock('../../models/Payment', () => {
+  const payments = [];
+
+  class MockPayment {
+    constructor(data) {
+      Object.assign(this, {
+        refundedAmount: 0,
+        refunds: [],
+      }, data);
+    }
+
+    async save() {
+      return this;
+    }
+
+    static async create(data) {
+      const payment = new MockPayment(data);
+      payments.push(payment);
+      return payment;
+    }
+
+    static async findOne(query) {
+      return payments.find((payment) =>
+        Object.entries(query).every(([key, value]) => payment[key] === value)
+      ) || null;
+    }
+
+    static _resetForTests() {
+      payments.length = 0;
+    }
+  }
+
+  return MockPayment;
+});
+
+const Payment = require('../../models/Payment');
+const { validatePaymentInput, authorizePayment, refundPayment } = require('../mockBank');
 
 function futureExpiry() {
   const d = new Date();
@@ -108,5 +144,71 @@ describe('mockBank.authorizePayment', () => {
     const a = authorizePayment(validInput()).transactionId;
     const b = authorizePayment(validInput()).transactionId;
     expect(a).not.toBe(b);
+  });
+});
+
+describe('refundPayment', () => {
+  beforeEach(async () => {
+    Payment._resetForTests();
+    await Payment.create({
+      transactionId: 'TXN-CONSUMED',
+      amount: 100,
+      status: 'consumed',
+      refundedAmount: 0,
+      refunds: [],
+    });
+  });
+
+  test('returns ok:true with valid transactionId and full refund amount', async () => {
+    const result = await refundPayment({ transactionId: 'TXN-CONSUMED', amount: 100 });
+
+    expect(result).toMatchObject({
+      ok: true,
+      refundId: expect.stringMatching(/^rfnd_/),
+      refundedAmount: 100,
+      originalAmount: 100,
+    });
+    expect(result.refundedAt).toBeInstanceOf(Date);
+  });
+
+  test('increments refundedAmount correctly on partial refund', async () => {
+    const result = await refundPayment({ transactionId: 'TXN-CONSUMED', amount: 40 });
+    const payment = await Payment.findOne({ transactionId: 'TXN-CONSUMED', status: 'consumed' });
+
+    expect(result).toMatchObject({ ok: true, refundedAmount: 40, originalAmount: 100 });
+    expect(payment.refundedAmount).toBe(40);
+    expect(payment.refunds).toHaveLength(1);
+    expect(payment.refunds[0]).toMatchObject({ amount: 40 });
+  });
+
+  test('returns ok:false status:404 for unknown transactionId', async () => {
+    await expect(refundPayment({ transactionId: 'TXN-UNKNOWN', amount: 20 }))
+      .resolves.toMatchObject({
+        ok: false,
+        status: 404,
+        error: expect.stringMatching(/not found/i),
+      });
+  });
+
+  test('returns ok:false status:400 when refund amount exceeds refundable balance', async () => {
+    await refundPayment({ transactionId: 'TXN-CONSUMED', amount: 60 });
+
+    await expect(refundPayment({ transactionId: 'TXN-CONSUMED', amount: 50 }))
+      .resolves.toMatchObject({
+        ok: false,
+        status: 400,
+        error: expect.stringMatching(/exceeds refundable balance/i),
+      });
+  });
+
+  test('allows two partial refunds that together equal full amount', async () => {
+    const first = await refundPayment({ transactionId: 'TXN-CONSUMED', amount: 25 });
+    const second = await refundPayment({ transactionId: 'TXN-CONSUMED', amount: 75 });
+    const payment = await Payment.findOne({ transactionId: 'TXN-CONSUMED', status: 'consumed' });
+
+    expect(first).toMatchObject({ ok: true, refundedAmount: 25 });
+    expect(second).toMatchObject({ ok: true, refundedAmount: 100 });
+    expect(payment.refundedAmount).toBe(100);
+    expect(payment.refunds).toHaveLength(2);
   });
 });
