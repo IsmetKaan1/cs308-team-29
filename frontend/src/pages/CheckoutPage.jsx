@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/cartStore';
 import { api } from '../api';
@@ -41,6 +41,13 @@ export default function CheckoutPage() {
   const [cvv, setCvv] = useState('');
   const [paymentError, setPaymentError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  /** Drop PAN/CVV/expiry from memory as soon as checkout no longer needs them. */
+  const clearSensitivePaymentState = useCallback(() => {
+    setCardNumber('');
+    setExpiry('');
+    setCvv('');
+  }, []);
 
   const isGuest = !localStorage.getItem('token');
 
@@ -108,18 +115,22 @@ export default function CheckoutPage() {
     setPaymentError('');
 
     const digits = cardNumber.replace(/\D+/g, '');
-    if (!cardHolder.trim()) { setPaymentError('Cardholder name is required.'); return; }
+    const cardHolderName = cardHolder.trim();
+    const expiryValue = expiry;
+    const cvvValue = cvv;
+
+    if (!cardHolderName) { setPaymentError('Cardholder name is required.'); return; }
     if (digits.length !== 16) { setPaymentError('Card number must be 16 digits.'); return; }
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) { setPaymentError('Expiry must be in MM/YY format.'); return; }
-    if (cvv.length !== 3) { setPaymentError('CVV must be 3 digits.'); return; }
+    if (!/^\d{2}\/\d{2}$/.test(expiryValue)) { setPaymentError('Expiry must be in MM/YY format.'); return; }
+    if (cvvValue.length !== 3) { setPaymentError('CVV must be 3 digits.'); return; }
 
     setSubmitting(true);
     try {
       const payment = await api.post('/api/payments/mock', {
-        cardHolderName: cardHolder.trim(),
+        cardHolderName,
         cardNumber: digits,
-        expiry,
-        cvv,
+        expiry: expiryValue,
+        cvv: cvvValue,
       });
 
       if (!payment.approved) {
@@ -132,8 +143,16 @@ export default function CheckoutPage() {
         shippingAddress: shippingAddressObject(),
         paymentTransactionId: payment.transactionId,
       });
+
+      clearSensitivePaymentState();
+
+      const confirmationOrder = {
+        ...order,
+        paymentCardLast4: order.paymentCardLast4 || payment.cardLast4 || '',
+      };
+
       dispatch({ type: 'CLEAR_CART' });
-      navigate('/order-confirmation', { state: { order } });
+      navigate('/order-confirmation', { state: { order: confirmationOrder } });
     } catch (err) {
       setPaymentError(err.message || 'An error occurred during payment.');
     } finally {

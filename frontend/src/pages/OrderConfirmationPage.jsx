@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import Spinner from '../components/Spinner';
 import { api } from '../api';
+import { formatMaskedCardLast4, getOrderCardLast4 } from '../lib/paymentDisplay';
 
 export default function OrderConfirmationPage() {
   const { state } = useLocation();
@@ -79,6 +80,8 @@ export default function OrderConfirmationPage() {
 
   if (!order) return null;
 
+  const maskedCard = formatMaskedCardLast4(getOrderCardLast4(order));
+
   return (
     <div className="page">
       <AppHeader showNav={false} />
@@ -95,6 +98,13 @@ export default function OrderConfirmationPage() {
               <span>Order No</span>
               <strong>{order.id}</strong>
             </div>
+
+            {maskedCard && (
+              <div className="order-meta-row">
+                <span>Payment</span>
+                <strong>{maskedCard}</strong>
+              </div>
+            )}
 
             <h2>Order Details</h2>
             <div className="checkout-items" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>

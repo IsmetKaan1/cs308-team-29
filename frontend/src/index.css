@@ -1903,6 +1903,13 @@ input, select, textarea {
   display: block;
 }
 
+.order-payment-mask {
+  font-size: var(--fs-12);
+  color: var(--color-ink-500);
+  display: block;
+  margin-top: 2px;
+}
+
 .order-date {
   font-size: var(--fs-12);
   color: var(--color-ink-500);

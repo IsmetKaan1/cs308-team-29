@@ -122,8 +122,13 @@ describe('CheckoutPage', () => {
 
   test('authorizes payment then posts the order, clears the cart, and navigates', async () => {
     apiMock.post
-      .mockResolvedValueOnce({ approved: true, transactionId: 'TXN-TEST', approvedAt: '2026-04-25T00:00:00Z' })
-      .mockResolvedValueOnce({ id: 'o1', status: 'processing' });
+      .mockResolvedValueOnce({
+        approved: true,
+        transactionId: 'TXN-TEST',
+        approvedAt: '2026-04-25T00:00:00Z',
+        cardLast4: '4242',
+      })
+      .mockResolvedValueOnce({ id: 'o1', status: 'processing', paymentCardLast4: '4242' });
 
     const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
     const { dispatch } = renderCheckout({ items, totalPrice: 100 });
@@ -158,8 +163,19 @@ describe('CheckoutPage', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'CLEAR_CART' });
     expect(navigateMock).toHaveBeenCalledWith(
       '/order-confirmation',
-      expect.objectContaining({ state: expect.any(Object) })
+      expect.objectContaining({
+        state: {
+          order: expect.objectContaining({
+            id: 'o1',
+            paymentCardLast4: '4242',
+          }),
+        },
+      })
     );
+
+    expect(screen.getByPlaceholderText(/4242 4242/)).toHaveValue('');
+    expect(screen.getByPlaceholderText('12/28')).toHaveValue('');
+    expect(screen.getByPlaceholderText('123')).toHaveValue('');
   });
 
   test('shows the bank decline message and does not call /api/orders when payment is declined', async () => {

@@ -5,6 +5,7 @@ import AppHeader from '../components/AppHeader';
 import CartSidebar from '../components/CartSidebar';
 import OrderStepper from '../components/OrderStepper';
 import Spinner from '../components/Spinner';
+import { formatMaskedCardLast4, getOrderCardLast4 } from '../lib/paymentDisplay';
 
 const STATUSES = [
   { value: 'processing', label: 'Processing' },
@@ -150,7 +151,9 @@ export default function OrdersPage() {
 
         {!loading && !error && orders.length > 0 && (
           <div className="orders-list">
-            {orders.map((order) => (
+            {orders.map((order) => {
+              const maskedCard = formatMaskedCardLast4(getOrderCardLast4(order));
+              return (
               <article key={order.id} className="order-card">
                 <div className="order-card-header">
                   <div>
@@ -160,6 +163,9 @@ export default function OrdersPage() {
                         day: '2-digit', month: 'long', year: 'numeric',
                       })}
                     </span>
+                    {maskedCard && (
+                      <span className="order-payment-mask">Paid with {maskedCard}</span>
+                    )}
                   </div>
                   <span className="order-total">{order.totalPrice.toFixed(2)} ₺</span>
                 </div>
@@ -287,7 +293,8 @@ export default function OrdersPage() {
                   </div>
                 )}
               </article>
-            ))}
+            );
+            })}
           </div>
         )}
       </main>
