@@ -52,7 +52,6 @@ function validatePaymentInput({ cardHolderName, cardNumber, expiry, cvv } = {}) 
     normalized: {
       cardHolderName: cardHolderName.trim(),
       cardLast4: cardDigits.slice(-4),
-      expiry,
     },
   };
 }
@@ -64,6 +63,9 @@ function newTransactionId() {
 /**
  * Authorize a validated payment request. Deterministic for testing:
  * any card ending in "0000" is declined; everything else is approved.
+ *
+ * Return values never include cardNumber, cvv, or full PAN — only cardLast4
+ * on approval (last four digits of the submitted card).
  */
 function authorizePayment({ cardHolderName, cardNumber, expiry, cvv } = {}) {
   const validation = validatePaymentInput({ cardHolderName, cardNumber, expiry, cvv });
@@ -78,7 +80,6 @@ function authorizePayment({ cardHolderName, cardNumber, expiry, cvv } = {}) {
       approved: false,
       reason: 'declined_by_bank',
       error: 'The bank declined this card.',
-      cardLast4,
     };
   }
 
@@ -87,7 +88,6 @@ function authorizePayment({ cardHolderName, cardNumber, expiry, cvv } = {}) {
     transactionId: newTransactionId(),
     approvedAt: new Date().toISOString(),
     cardLast4,
-    cardHolderName: validation.normalized.cardHolderName,
   };
 }
 

@@ -1,0 +1,26 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`paymentExposure public payment payloads denied payload shape snapshot omits sensitive keys 1`] = `
+{
+  "keys": [
+    "approved",
+    "error",
+    "reason",
+  ],
+  "reason": "invalid_input",
+  "sensitiveKeys": [],
+}
+`;
+
+exports[`paymentExposure public payment payloads success payload shape snapshot omits sensitive keys 1`] = `
+{
+  "cardLast4": "4242",
+  "keys": [
+    "approved",
+    "approvedAt",
+    "cardLast4",
+    "transactionId",
+  ],
+  "sensitiveKeys": [],
+}
+`;

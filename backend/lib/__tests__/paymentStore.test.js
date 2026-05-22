@@ -1,4 +1,5 @@
 const { registerTransaction, consumeTransaction, _resetForTests } = require('../paymentStore');
+const { findSensitivePaymentKeys } = require('../paymentExposure');
 
 beforeEach(() => {
   _resetForTests();
@@ -23,6 +24,8 @@ describe('paymentStore.consumeTransaction', () => {
     registerTransaction('TXN-1', { userId: 'u1', cardLast4: '4242' });
     const first = consumeTransaction('TXN-1', { userId: 'u1' });
     expect(first).toMatchObject({ ok: true, record: { cardLast4: '4242' } });
+    expect(findSensitivePaymentKeys(first.record)).toEqual([]);
+    expect(first.record.cardNumber).toBeUndefined();
 
     const second = consumeTransaction('TXN-1', { userId: 'u1' });
     expect(second.ok).toBe(false);

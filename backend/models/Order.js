@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { sanitizeOrderJson } = require('../lib/paymentExposure');
 
 const ORDER_STATUSES = ['processing', 'in-transit', 'delivered', 'cancelled'];
 
@@ -44,6 +45,7 @@ const orderSchema = new mongoose.Schema({
     enum: ['approved', 'declined'],
     default: 'approved',
   },
+  // Masked card tail only — never store cardNumber, cvv, or full PAN.
   paymentCardLast4: { type: String, default: '' },
   paidAt: { type: Date, default: Date.now },
   cancelledAt: { type: Date, default: null },
@@ -57,11 +59,7 @@ const orderSchema = new mongoose.Schema({
 });
 
 orderSchema.set('toJSON', {
-  transform: (doc, ret) => {
-    ret.id = ret._id;
-    delete ret._id;
-    delete ret.__v;
-  },
+  transform: (_doc, ret) => sanitizeOrderJson(ret),
 });
 
 const Order = mongoose.model('Order', orderSchema);

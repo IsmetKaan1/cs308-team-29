@@ -1,0 +1,28 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Order Model toJSON matches GET /api/orders/me shape without cardNumber or cvv 1`] = `
+{
+  "keys": [
+    "cancellationReason",
+    "cancelledAt",
+    "createdAt",
+    "forwardedToDeliveryAt",
+    "id",
+    "invoiceEmailError",
+    "invoiceEmailStatus",
+    "invoiceEmailedAt",
+    "items",
+    "paidAt",
+    "paymentCardLast4",
+    "paymentStatus",
+    "paymentTransactionId",
+    "refundStatus",
+    "shippingAddress",
+    "status",
+    "totalPrice",
+    "userId",
+  ],
+  "paymentCardLast4": "4242",
+  "sensitiveKeys": [],
+}
+`;

@@ -1,4 +1,5 @@
 const { validatePaymentInput, authorizePayment } = require('../mockBank');
+const { findSensitivePaymentKeys } = require('../paymentExposure');
 
 function futureExpiry() {
   const d = new Date();
@@ -86,14 +87,15 @@ describe('mockBank.authorizePayment', () => {
     expect(r.transactionId).toBeUndefined();
   });
 
-  test('declines any card ending in 0000', () => {
+  test('declines any card ending in 0000 without exposing cardLast4', () => {
     const r = authorizePayment({ ...validInput(), cardNumber: '4242 4242 4242 0000' });
     expect(r).toMatchObject({
       approved: false,
       reason: 'declined_by_bank',
-      cardLast4: '0000',
+      error: expect.stringMatching(/declined/i),
     });
     expect(r.transactionId).toBeUndefined();
+    expect(r.cardLast4).toBeUndefined();
   });
 
   test('approves a valid card and returns a transactionId + ISO approvedAt', () => {
@@ -108,5 +110,30 @@ describe('mockBank.authorizePayment', () => {
     const a = authorizePayment(validInput()).transactionId;
     const b = authorizePayment(validInput()).transactionId;
     expect(a).not.toBe(b);
+  });
+
+  test('never returns cardNumber, cvv, or full PAN in any outcome', () => {
+    const pan = '4242424242424242';
+    const outcomes = [
+      authorizePayment(validInput()),
+      authorizePayment({ ...validInput(), cvv: 'xx' }),
+      authorizePayment({ ...validInput(), cardNumber: '4242 4242 4242 0000' }),
+    ];
+
+    for (const result of outcomes) {
+      expect(findSensitivePaymentKeys(result)).toEqual([]);
+      expect(JSON.stringify(result)).not.toContain(pan);
+      expect(result.cardNumber).toBeUndefined();
+      expect(result.cvv).toBeUndefined();
+    }
+  });
+
+  test('approval exposes only cardLast4 as masked card data', () => {
+    const r = authorizePayment(validInput());
+    expect(r.cardLast4).toBe('4242');
+    expect(r.cardHolderName).toBeUndefined();
+    expect(Object.keys(r).sort()).toEqual(
+      ['approved', 'approvedAt', 'cardLast4', 'transactionId'].sort()
+    );
   });
 });

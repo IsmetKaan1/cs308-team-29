@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Order = require('../Order');
+const { findSensitivePaymentKeys } = require('../../lib/paymentExposure');
 
 describe('Order Model', () => {
   it('should be invalid if required fields are empty', () => {
@@ -95,5 +96,41 @@ describe('Order Model', () => {
     });
     const error = order.validateSync();
     expect(error.errors.paymentStatus).toBeDefined();
+  });
+
+  it('toJSON matches GET /api/orders/me shape without cardNumber or cvv', () => {
+    const order = new Order({
+      userId: 'user-123',
+      items: [{
+        productId: new mongoose.Types.ObjectId(),
+        name: 'Item',
+        code: 'CODE1',
+        price: 10,
+        quantity: 1,
+      }],
+      totalPrice: 10,
+      shippingAddress: {
+        fullName: 'Test User',
+        address: '123 Test St',
+        city: 'Test City',
+        postalCode: '12345',
+        country: 'Testland',
+      },
+      paymentTransactionId: 'TXN-ABC',
+      paymentCardLast4: '4242',
+    });
+
+    const json = order.toJSON();
+
+    expect({
+      keys: Object.keys(json).sort(),
+      sensitiveKeys: findSensitivePaymentKeys(json),
+      paymentCardLast4: json.paymentCardLast4,
+    }).toMatchSnapshot();
+    expect(findSensitivePaymentKeys(json)).toEqual([]);
+    expect(json).not.toHaveProperty('cardNumber');
+    expect(json).not.toHaveProperty('cvv');
+    expect(json).not.toHaveProperty('cardLast4');
+    expect(json.paymentCardLast4).toBe('4242');
   });
 });
