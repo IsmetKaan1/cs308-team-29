@@ -6,6 +6,7 @@
  */
 
 const { randomBytes } = require('crypto');
+const Payment = require('../models/Payment');
 
 const CARD_DIGITS = 16;
 const CVV_DIGITS = 3;
@@ -91,9 +92,42 @@ function authorizePayment({ cardHolderName, cardNumber, expiry, cvv } = {}) {
   };
 }
 
+async function refundPayment({ transactionId, amount }) {
+  if (!transactionId) return { ok: false, error: 'transactionId is required', status: 400 };
+  if (!amount || typeof amount !== 'number' || amount <= 0) {
+    return { ok: false, error: 'amount must be a positive number', status: 400 };
+  }
+
+  const payment = await Payment.findOne({ transactionId, status: 'consumed' });
+  if (!payment) {
+    return { ok: false, error: 'Transaction not found or not eligible for refund', status: 404 };
+  }
+
+  const alreadyRefunded = payment.refundedAmount || 0;
+  const refundable = Math.round((payment.amount - alreadyRefunded) * 100) / 100;
+  if (amount > refundable + 0.01) {
+    return { ok: false, error: `Refund amount ${amount} exceeds refundable balance ${refundable}`, status: 400 };
+  }
+
+  const refundId = 'rfnd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  const refundedAt = new Date();
+  payment.refundedAmount = Math.round((alreadyRefunded + amount) * 100) / 100;
+  payment.refunds.push({ refundId, amount, refundedAt });
+  await payment.save();
+
+  return {
+    ok: true,
+    refundId,
+    refundedAt,
+    refundedAmount: payment.refundedAmount,
+    originalAmount: payment.amount,
+  };
+}
+
 module.exports = {
   validatePaymentInput,
   authorizePayment,
+  refundPayment,
   CARD_DIGITS,
   CVV_DIGITS,
 };

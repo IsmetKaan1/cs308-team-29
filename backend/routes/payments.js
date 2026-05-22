@@ -1,6 +1,6 @@
 const express = require('express');
 const authenticate = require('../middleware/auth');
-const { authorizePayment } = require('../lib/mockBank');
+const { authorizePayment, refundPayment } = require('../lib/mockBank');
 const { registerTransaction } = require('../lib/paymentStore');
 
 const router = express.Router();
@@ -29,6 +29,35 @@ router.post('/mock', authenticate, (req, res) => {
     approvedAt: result.approvedAt,
     cardLast4: result.cardLast4,
   });
+});
+
+router.post('/mock/refund', authenticate, async (req, res) => {
+  const { transactionId, amount } = req.body || {};
+
+  if (!transactionId) {
+    return res.status(400).json({ success: false, message: 'transactionId is required' });
+  }
+  if (!amount || typeof amount !== 'number' || amount <= 0) {
+    return res.status(400).json({ success: false, message: 'amount must be a positive number' });
+  }
+
+  try {
+    const result = await refundPayment({ transactionId, amount });
+
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ success: false, message: result.error });
+    }
+
+    return res.status(200).json({
+      success: true,
+      refundId: result.refundId,
+      refundedAt: result.refundedAt,
+      refundedAmount: result.refundedAmount,
+    });
+  } catch (err) {
+    console.error('Mock refund failed:', err);
+    return res.status(500).json({ success: false, message: 'Could not refund payment' });
+  }
 });
 
 module.exports = router;
