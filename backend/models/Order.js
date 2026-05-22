@@ -54,7 +54,10 @@ const orderSchema = new mongoose.Schema({
     default: 'none',
   },
   createdAt: { type: Date, default: Date.now },
+  idempotencyKey: { type: String, required: false },
 });
+
+orderSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
 
 orderSchema.set('toJSON', {
   transform: (doc, ret) => {
