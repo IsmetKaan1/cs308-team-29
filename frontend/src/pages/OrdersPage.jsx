@@ -16,6 +16,20 @@ const STATUS_ALIASES = {
   'In Transit': 'in-transit',
   Delivered: 'delivered',
 };
+const refundLabel = {
+  refunded: '✓ Refunded',
+  failed: '✗ Refund failed',
+  partial: '~ Partially refunded',
+  pending: '⏳ Refund pending',
+  skipped: null,
+  none: null,
+};
+const refundColor = {
+  refunded: '#15803d',
+  failed: '#b91c1c',
+  partial: '#c2410c',
+  pending: '#c2410c',
+};
 
 function normalizeOrderStatus(status) {
   return STATUS_ALIASES[status] || status;
@@ -209,6 +223,18 @@ export default function OrdersPage() {
                   </div>
                   <div>
                     <OrderStepper status={order.status} />
+                    {refundLabel[order.refundStatus] && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          color: refundColor[order.refundStatus],
+                        }}
+                      >
+                        {refundLabel[order.refundStatus]}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -236,7 +262,7 @@ export default function OrdersPage() {
 
                 {!canUpdateStatus && order.status === 'cancelled' && (
                   <div className="order-update-row">
-                    <span className="order-feedback order-feedback--err">Cancelled · refund pending</span>
+                    <span className="order-feedback order-feedback--err">Cancelled</span>
                   </div>
                 )}
 
