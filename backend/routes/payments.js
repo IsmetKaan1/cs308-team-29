@@ -7,7 +7,17 @@ const { registerTransaction } = require('../lib/paymentStore');
 const router = express.Router();
 
 router.post('/mock', authenticate, (req, res) => {
-  const result = authorizePayment(req.body || {});
+    const { amount } = req.body || {};
+
+    if (amount === undefined || typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({
+            approved: false,
+            reason: 'invalid_input',
+            error: 'amount must be a positive number',
+        });
+    }
+    const normalizedAmount = Math.round(amount * 100) / 100;
+    const result = authorizePayment(req.body || {});
 
   if (!result.approved) {
     const status = result.reason === 'invalid_input' ? 400 : 402;
@@ -22,14 +32,15 @@ router.post('/mock', authenticate, (req, res) => {
     userId: req.user.id.toString(),
     approvedAt: result.approvedAt,
     cardLast4: result.cardLast4,
-    amount: req.body.amount,
-  });
+    amount: normalizedAmount,
+    });
 
   res.json({
     approved: true,
     transactionId: result.transactionId,
     approvedAt: result.approvedAt,
     cardLast4: result.cardLast4,
+    amount: normalizedAmount,
   });
 });
 
