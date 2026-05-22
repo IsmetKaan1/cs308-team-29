@@ -1,5 +1,6 @@
 const express = require('express');
 const authenticate = require('../middleware/auth');
+const requireRole = require('../middleware/roleGuard');
 const { authorizePayment, refundPayment } = require('../lib/mockBank');
 const { registerTransaction } = require('../lib/paymentStore');
 
@@ -31,7 +32,7 @@ router.post('/mock', authenticate, (req, res) => {
   });
 });
 
-router.post('/mock/refund', authenticate, async (req, res) => {
+router.post('/mock/refund', authenticate, requireRole('sales_manager'), async (req, res) => {
   const { transactionId, amount } = req.body || {};
 
   if (!transactionId) {
