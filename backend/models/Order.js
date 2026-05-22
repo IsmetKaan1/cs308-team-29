@@ -50,7 +50,7 @@ const orderSchema = new mongoose.Schema({
   cancellationReason: { type: String, default: '' },
   refundStatus: {
     type: String,
-    enum: ['none', 'pending', 'refunded'],
+    enum: ['none', 'pending', 'refunded', 'partial', 'failed', 'skipped'],
     default: 'none',
   },
   createdAt: { type: Date, default: Date.now },

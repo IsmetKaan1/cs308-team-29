@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
+const Payment = require('../models/Payment');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const Cart = require('../models/Cart');
@@ -8,6 +9,7 @@ const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
 const { generateInvoicePdf } = require('../services/pdfService');
 const { sendInvoiceEmail, isEmailConfigured } = require('../services/emailService');
+const { refundPayment } = require('../lib/mockBank');
 const { consumeTransaction } = require('../lib/paymentStore');
 
 const ORDER_STATUSES = Order.STATUSES;
@@ -221,6 +223,20 @@ router.post('/', authenticate, async (req, res) => {
         paymentCardLast4: payment.record.cardLast4 || '',
         paidAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
       });
+      await Payment.findOneAndUpdate(
+        { transactionId: paymentTransactionId },
+        {
+          $set: {
+            userId: req.user.id.toString(),
+            amount: totalPrice,
+            status: 'consumed',
+            cardLast4: payment.record.cardLast4 || '',
+            approvedAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
+            consumedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     } catch (err) {
       await releaseStock(reservation.reserved);
       throw err;
@@ -322,7 +338,15 @@ router.patch('/:id/cancel', authenticate, async (req, res) => {
     order.status = 'cancelled';
     order.cancelledAt = new Date();
     order.cancellationReason = reason;
-    order.refundStatus = 'pending';
+    if (order.paymentTransactionId) {
+      const refundResult = await refundPayment({
+        transactionId: order.paymentTransactionId,
+        amount: order.totalPrice,
+      });
+      order.refundStatus = refundResult.ok ? 'refunded' : 'failed';
+    } else {
+      order.refundStatus = 'skipped';
+    }
     await order.save();
 
     res.json(order);

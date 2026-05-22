@@ -5,6 +5,7 @@ const Product = require('../models/Product');
 const Return = require('../models/Return');
 const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
+const { refundPayment } = require('../lib/mockBank');
 
 const router = express.Router();
 const managerOnly = [authenticate, requireRole('product_manager')];
@@ -126,16 +127,24 @@ router.patch('/:id', managerOnly, async (req, res) => {
     }
 
     if (action === 'approve') {
+      const order = await Order.findById(ret.orderId);
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+      if (order.paymentTransactionId) {
+        const refundResult = await refundPayment({
+          transactionId: order.paymentTransactionId,
+          amount: ret.refundAmount ?? ret.totalRefund,
+        });
+        order.refundStatus = refundResult.ok ? 'refunded' : 'failed';
+        await order.save();
+      }
+
       ret.status = 'approved';
       ret.reviewedBy = req.user.id;
       ret.reviewedAt = new Date();
       await Product.updateOne(
         { _id: ret.productId },
         { $inc: { quantityInStock: ret.quantity } }
-      );
-      await Order.updateOne(
-        { _id: ret.orderId },
-        { $set: { refundStatus: 'refunded' } }
       );
     } else {
       ret.status = 'rejected';
