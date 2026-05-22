@@ -16,7 +16,7 @@ router.post('/mock', authenticate, (req, res) => {
             error: 'amount must be a positive number',
         });
     }
-
+    const normalizedAmount = Math.round(amount * 100) / 100;
     const result = authorizePayment(req.body || {});
 
   if (!result.approved) {
@@ -32,6 +32,7 @@ router.post('/mock', authenticate, (req, res) => {
     userId: req.user.id.toString(),
     approvedAt: result.approvedAt,
     cardLast4: result.cardLast4,
+    amount: normalizedAmount,
   });
 
   res.json({
@@ -39,6 +40,7 @@ router.post('/mock', authenticate, (req, res) => {
     transactionId: result.transactionId,
     approvedAt: result.approvedAt,
     cardLast4: result.cardLast4,
+    amount: normalizedAmount,
   });
 });
 
