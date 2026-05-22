@@ -142,6 +142,21 @@ router.get('/', authenticate, requireRole('product_manager'), async (req, res) =
 
 router.post('/', authenticate, async (req, res) => {
   try {
+    const idempotencyKey = req.header('Idempotency-Key') || req.body.idempotencyKey;
+    if (idempotencyKey && idempotencyKey.length > 128) {
+      return res.status(400).json({ error: 'Idempotency key is too long (max 128 chars).' });
+    }
+
+    if (idempotencyKey) {
+      const existingOrder = await Order.findOne({ userId: req.user.id.toString(), idempotencyKey });
+      if (existingOrder) {
+        // Return the existing order directly on replay. 
+        // We do not re-run transaction consumption or stock reservation, 
+        // even if the cart body changed. We just return the first successful order.
+        return res.status(200).json(existingOrder);
+      }
+    }
+
     const { items, shippingAddress, paymentTransactionId } = req.body;
 
     const normalizedItems = normalizeOrderItems(items);
@@ -203,6 +218,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const payment = consumeTransaction(paymentTransactionId, {
       userId: req.user.id.toString(),
+      expectedAmount: totalPrice,
     });
     if (!payment.ok) {
       await releaseStock(reservation.reserved);
@@ -222,6 +238,7 @@ router.post('/', authenticate, async (req, res) => {
         paymentStatus: 'approved',
         paymentCardLast4: payment.record.cardLast4 || '',
         paidAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
+        idempotencyKey,
       });
       await Payment.findOneAndUpdate(
         { transactionId: paymentTransactionId },

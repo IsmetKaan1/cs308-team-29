@@ -96,4 +96,13 @@ describe('Order Model', () => {
     const error = order.validateSync();
     expect(error.errors.paymentStatus).toBeDefined();
   });
+
+  it('should have a compound unique sparse index on userId and idempotencyKey', () => {
+    const indexes = Order.schema.indexes();
+    const idempotencyIndex = indexes.find(i => 
+      i[0].userId === 1 && i[0].idempotencyKey === 1
+    );
+    expect(idempotencyIndex).toBeDefined();
+    expect(idempotencyIndex[1]).toMatchObject({ unique: true, sparse: true });
+  });
 });

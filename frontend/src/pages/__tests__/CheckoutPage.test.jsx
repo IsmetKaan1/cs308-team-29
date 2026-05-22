@@ -146,6 +146,7 @@ describe('CheckoutPage', () => {
         cardNumber: '4242424242424242',
         expiry: '12/30',
         cvv: '123',
+        amount: 100,
       }));
     });
 
@@ -275,6 +276,26 @@ describe('CheckoutPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Not enough stock/i)).toBeInTheDocument();
+    });
+  });
+
+  test('handles 402 status code and surfaces user-friendly mismatch error', async () => {
+    const error402 = new Error('Payment amount does not match order total.');
+    error402.status = 402;
+    
+    apiMock.post
+      .mockResolvedValueOnce({ approved: true, transactionId: 'TXN-TEST' })
+      .mockRejectedValueOnce(error402);
+
+    const items = [{ id: 'p1', code: 'CS 308', name: 'SE', price: 100, quantity: 1 }];
+    renderCheckout({ items, totalPrice: 100 });
+
+    goToPaymentStep();
+    fillPayment();
+    fireEvent.click(screen.getByRole('button', { name: /Place Order/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Payment total changed. Please review your cart and try again.')).toBeInTheDocument();
     });
   });
 });

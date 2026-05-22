@@ -33,7 +33,7 @@ router.post('/mock', authenticate, (req, res) => {
     approvedAt: result.approvedAt,
     cardLast4: result.cardLast4,
     amount: normalizedAmount,
-  });
+    });
 
   res.json({
     approved: true,
