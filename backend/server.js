@@ -14,6 +14,7 @@ const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
 const paymentRoutes = require('./routes/payments');
+const sanitizePaymentBody = require('./middleware/sanitizePaymentBody');
 const { productReviewsRouter, reviewsRouter } = require('./routes/reviews');
 const wishlistRoutes = require('./routes/wishlist');
 const salesRoutes = require('./routes/sales');
@@ -28,6 +29,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/payments', sanitizePaymentBody);
 
 connectMongoDB();
 
