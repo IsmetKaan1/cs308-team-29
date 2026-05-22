@@ -275,7 +275,12 @@ router.post('/', authenticate, async (req, res) => {
     if (err.name === 'CastError') {
       return res.status(400).json({ error: 'One or more cart items are invalid.' });
     }
-    console.error('Failed to create order:', err);
+    console.error(
+      'Failed to create order:',
+      err.message || err,
+      'paymentTransactionId:',
+      req.body?.paymentTransactionId
+    );
     res.status(500).json({ error: 'Could not place the order. Please try again.' });
   }
 });

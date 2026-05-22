@@ -14,6 +14,7 @@ const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
 const paymentRoutes = require('./routes/payments');
+const sanitizePaymentBody = require('./middleware/sanitizePaymentBody');
 const { productReviewsRouter, reviewsRouter } = require('./routes/reviews');
 const wishlistRoutes = require('./routes/wishlist');
 const salesRoutes = require('./routes/sales');
@@ -39,6 +40,7 @@ app.use('/api/reviews', reviewsRouter);
 
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payments', sanitizePaymentBody);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/sales', salesRoutes);
