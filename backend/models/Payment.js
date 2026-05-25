@@ -1,25 +1,32 @@
 const mongoose = require('mongoose');
 
-const refundSchema = new mongoose.Schema({
-  refundId: { type: String, required: true },
-  amount: { type: Number, required: true },
-  refundedAt: { type: Date, default: Date.now },
-}, { _id: false });
+const PAYMENT_STATUSES = ['approved', 'consumed', 'expired'];
 
 const paymentSchema = new mongoose.Schema({
   transactionId: { type: String, required: true, unique: true, index: true },
-  userId: { type: String, default: '' },
-  amount: { type: Number, required: true, min: 0 },
+  userId:         { type: String, default: '', index: true },
+  amount:         { type: Number, required: true, min: 0 },
+  currency:       { type: String, default: 'TRY' },
+  cardLast4:      { type: String, default: '' },
+  cardHolderName: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['authorized', 'consumed'],
-    default: 'authorized',
+    enum: PAYMENT_STATUSES,
+    default: 'approved',
   },
-  cardLast4: { type: String, default: '' },
-  approvedAt: { type: Date, default: Date.now },
-  consumedAt: { type: Date, default: null },
-  refundedAmount: { type: Number, default: 0, min: 0 },
-  refunds: [refundSchema],
+  approvedAt:  { type: Date, default: Date.now },
+  consumedAt:  { type: Date, default: null },
+  expiresAt:   { type: Date },
+  orderId:     { type: String },
+});
+
+// TTL: MongoDB removes documents ~15 min after expiresAt; background task runs every 60s so actual delay may be up to 75s
+paymentSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 900 });
+paymentSchema.index({ userId: 1, status: 1 });
+
+paymentSchema.pre('save', function (next) {
+  this.amount = Math.round(this.amount * 100) / 100;
+  next();
 });
 
 paymentSchema.set('toJSON', {
@@ -30,4 +37,8 @@ paymentSchema.set('toJSON', {
   },
 });
 
-module.exports = mongoose.model('Payment', paymentSchema);
+const Payment = mongoose.model('Payment', paymentSchema);
+Payment.STATUSES = PAYMENT_STATUSES;
+
+module.exports = Payment;
+module.exports.STATUSES = PAYMENT_STATUSES;
