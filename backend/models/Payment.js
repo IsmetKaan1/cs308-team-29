@@ -24,9 +24,8 @@ const paymentSchema = new mongoose.Schema({
 paymentSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 900 });
 paymentSchema.index({ userId: 1, status: 1 });
 
-paymentSchema.pre('save', function (next) {
+paymentSchema.pre('save', async function () {
   this.amount = Math.round(this.amount * 100) / 100;
-  next();
 });
 
 paymentSchema.set('toJSON', {
