@@ -216,7 +216,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(409).json({ error: reservation.error });
     }
 
-    const payment = consumeTransaction(paymentTransactionId, {
+    const payment = await consumeTransaction(paymentTransactionId, {
       userId: req.user.id.toString(),
       expectedAmount: totalPrice,
     });
@@ -240,20 +240,11 @@ router.post('/', authenticate, async (req, res) => {
         paidAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
         idempotencyKey,
       });
+      // Link the order back to the payment document
       await Payment.findOneAndUpdate(
         { transactionId: paymentTransactionId },
-        {
-          $set: {
-            userId: req.user.id.toString(),
-            amount: totalPrice,
-            status: 'consumed',
-            cardLast4: payment.record.cardLast4 || '',
-            approvedAt: payment.record.approvedAt ? new Date(payment.record.approvedAt) : new Date(),
-            consumedAt: new Date(),
-          },
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+        { $set: { orderId: order._id.toString() } }
+      ).catch((err) => console.error('Failed to set orderId on Payment:', err));
     } catch (err) {
       await releaseStock(reservation.reserved);
       throw err;

@@ -6,7 +6,7 @@ const { registerTransaction } = require('../lib/paymentStore');
 
 const router = express.Router();
 
-router.post('/mock', authenticate, (req, res) => {
+router.post('/mock', authenticate, async (req, res) => {
   const result = authorizePayment(req.body || {});
 
   if (!result.approved) {
@@ -18,12 +18,25 @@ router.post('/mock', authenticate, (req, res) => {
     });
   }
 
-  registerTransaction(result.transactionId, {
-    userId: req.user.id.toString(),
-    approvedAt: result.approvedAt,
-    cardLast4: result.cardLast4,
-    amount: req.body.amount,
-  });
+  try {
+    await registerTransaction(result.transactionId, {
+      userId: req.user.id.toString(),
+      approvedAt: result.approvedAt,
+      cardLast4: result.cardLast4,
+      cardHolderName: req.body.cardHolderName || '',
+      amount: req.body.amount,
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        approved: false,
+        reason: 'duplicate_transaction',
+        error: 'A transaction with this ID already exists.',
+      });
+    }
+    console.error('Failed to persist payment:', err);
+    return res.status(500).json({ approved: false, reason: 'server_error', error: 'Failed to store payment.' });
+  }
 
   res.json({
     approved: true,
