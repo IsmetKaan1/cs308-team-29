@@ -17,8 +17,9 @@ router.post('/mock', authenticate, async (req, res) => {
     });
   }
 
-  const normalizedAmount = Math.round(amount * 100) / 100;
-  const result = authorizePayment(req.body || {});
+  const normalizedAmount = Number(amount.toFixed(2));
+  const paymentRequest = { ...(req.body || {}), amount: normalizedAmount };
+  const result = authorizePayment(paymentRequest);
 
   if (!result.approved) {
     const status = result.reason === 'invalid_input' ? 400 : 402;
