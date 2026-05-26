@@ -9,7 +9,7 @@ const router = express.Router();
 router.post('/mock', authenticate, async (req, res) => {
   const { amount } = req.body || {};
 
-  if (amount === undefined || typeof amount !== 'number' || amount <= 0) {
+  if (amount === undefined || typeof amount !== 'number' || !Number.isFinite(amount)) {
     return res.status(400).json({
       approved: false,
       reason: 'invalid_input',
@@ -17,7 +17,14 @@ router.post('/mock', authenticate, async (req, res) => {
     });
   }
 
-  const normalizedAmount = Number(amount.toFixed(2));
+  const normalizedAmount = Number.parseFloat(amount.toFixed(2));
+  if (normalizedAmount <= 0) {
+    return res.status(400).json({
+      approved: false,
+      reason: 'invalid_input',
+      error: 'amount must be a positive number',
+    });
+  }
   const paymentRequest = { ...(req.body || {}), amount: normalizedAmount };
   const result = authorizePayment(paymentRequest);
 
