@@ -13,7 +13,7 @@ router.post('/mock', authenticate, async (req, res) => {
     return res.status(400).json({
       approved: false,
       reason: 'invalid_input',
-      error: 'amount must be a positive number',
+      error: 'amount must be a valid, finite number',
     });
   }
 
