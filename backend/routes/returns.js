@@ -3,9 +3,11 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Return = require('../models/Return');
+const User = require('../models/User');
 const authenticate = require('../middleware/auth');
 const requireRole = require('../middleware/roleGuard');
 const { refundPayment } = require('../lib/mockBank');
+const { sendRefundEmail, isEmailConfigured } = require('../services/emailService');
 
 const router = express.Router();
 // Refund requests are evaluated and authorized by the sales manager (REQ 15).
@@ -178,6 +180,17 @@ router.patch('/:id', reviewerOnly, async (req, res) => {
         { _id: ret.productId },
         { $inc: { quantityInStock: ret.quantity } }
       );
+
+      // Notify the customer that their refund was approved (best-effort —
+      // a mail failure must not roll back the refund/restock).
+      try {
+        if (isEmailConfigured()) {
+          const customer = await User.findById(ret.userId).select('email');
+          if (customer?.email) await sendRefundEmail(customer.email, ret);
+        }
+      } catch (mailErr) {
+        console.warn('Refund email failed for return', String(ret._id), ':', mailErr.message);
+      }
     }
 
     await ret.save();

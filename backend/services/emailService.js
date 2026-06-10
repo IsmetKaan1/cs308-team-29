@@ -95,4 +95,34 @@ async function sendDiscountEmail(toEmail, product, oldPrice, newPrice, discountR
   });
 }
 
-module.exports = { sendInvoiceEmail, sendDiscountEmail, isEmailConfigured };
+async function sendRefundEmail(toEmail, returnDoc) {
+  const mailTransporter = getTransporter();
+  if (!mailTransporter) {
+    throw new Error('Email service is not configured.');
+  }
+  const subject = `Your refund for ${returnDoc.productName} has been approved`;
+  const text = [
+    `Hello,`,
+    ``,
+    `Good news — we have received your returned item and approved your refund:`,
+    ``,
+    `  ${returnDoc.productName} (${returnDoc.productCode})`,
+    `  Quantity: ${returnDoc.quantity}`,
+    `  Refund amount: $${Number(returnDoc.totalRefund).toFixed(2)}`,
+    ``,
+    `The amount has been refunded to your original payment method and the item`,
+    `has been returned to our stock.`,
+    ``,
+    `Best regards,`,
+    `Your Store`,
+  ].join('\n');
+
+  return mailTransporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to: toEmail,
+    subject,
+    text,
+  });
+}
+
+module.exports = { sendInvoiceEmail, sendDiscountEmail, sendRefundEmail, isEmailConfigured };
