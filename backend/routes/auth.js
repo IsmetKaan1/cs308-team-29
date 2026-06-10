@@ -48,9 +48,12 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, username, identifier, password } = req.body;
-  const id = (identifier || email || username || '').trim();
+  // Only accept string credentials — anything else (e.g. an injected object)
+  // is treated as missing rather than passed into the query.
+  const rawId = identifier || email || username || '';
+  const id = typeof rawId === 'string' ? rawId.trim() : '';
 
-  if (!id || !password) {
+  if (!id || typeof password !== 'string' || !password) {
     return res.status(400).json({ error: 'Email/username and password are required' });
   }
 

@@ -2,9 +2,15 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const sanitizeMongo = require('./middleware/sanitizeMongo');
 
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET is not configured');
+}
+if (!process.env.FIELD_ENCRYPTION_KEY) {
+  throw new Error('FIELD_ENCRYPTION_KEY is not configured');
 }
 
 const authRoutes = require('./routes/auth');
@@ -27,10 +33,52 @@ const connectMongoDB = require('./mongoDb');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+// Trust the proxy hop (needed for correct client IPs behind a reverse proxy,
+// which the rate limiter keys on).
+app.set('trust proxy', 1);
+
+// Security headers.
+app.use(helmet());
+
+// Restrict cross-origin access to the known frontend origin(s).
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    // Allow same-origin / non-browser clients (no Origin header).
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+}));
+
+app.use(express.json({ limit: '1mb' }));
+
+// Strip Mongo operators from incoming payloads (NoSQL-injection guard).
+app.use(sanitizeMongo);
+
+// Throttle abuse-prone endpoints (REQ 16 defensive programming).
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again later.' },
+});
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many payment attempts. Please try again later.' },
+});
 
 connectMongoDB();
+
+app.use('/api/login', authLimiter);
+app.use('/api/register', authLimiter);
+app.use('/api/payments', paymentLimiter);
 
 app.use('/api', authRoutes);
 app.use('/api/profile', profileRoutes);

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { encryptedFields } = require('../lib/encryption');
 
 const homeAddressSchema = new mongoose.Schema({
   fullName:   { type: String, default: '' },
@@ -25,6 +26,17 @@ userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
+
+// Encrypt sensitive account PII at rest (REQ 16). Passwords are hashed
+// separately above; email/username stay queryable for login + uniqueness.
+encryptedFields(userSchema, [
+  'taxId',
+  'homeAddress.fullName',
+  'homeAddress.address',
+  'homeAddress.city',
+  'homeAddress.postalCode',
+  'homeAddress.country',
+]);
 
 userSchema.methods.comparePassword = function (candidate) {
   return bcrypt.compare(candidate, this.password);

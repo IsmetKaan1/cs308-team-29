@@ -49,20 +49,28 @@ router.put('/', authenticate, async (req, res) => {
       return res.status(409).json({ error: 'Username already taken' });
     }
 
-    const update = { username, full_name: fullName, gender };
+    // Load + save (rather than findByIdAndUpdate) so the encryption hooks on
+    // the User model run for the sensitive fields below.
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (username !== undefined) user.username = username;
+    if (fullName !== undefined) user.full_name = fullName;
+    if (gender !== undefined) user.gender = gender;
+
     if (taxId !== undefined) {
       const trimmed = String(taxId).trim();
       if (trimmed && !/^[0-9]{10,11}$/.test(trimmed)) {
         return res.status(400).json({ error: 'Tax ID must be 10 or 11 digits.' });
       }
-      update.taxId = trimmed;
+      user.taxId = trimmed;
     }
     const normalizedAddress = normalizeHomeAddress(homeAddress);
     if (normalizedAddress) {
-      update.homeAddress = { ...(req.body.homeAddress || {}), ...normalizedAddress };
+      user.homeAddress = { ...(user.homeAddress?.toObject?.() || {}), ...normalizedAddress };
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true });
+    await user.save();
     res.json(toUserPayload(user));
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
