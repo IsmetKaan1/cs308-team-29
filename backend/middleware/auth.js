@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 
+// Verify the Bearer JWT and attach the decoded payload to req.user.
+
 function authenticate(req, res, next) {
   const header = req.headers.authorization;
   if (!header) return res.status(401).json({ error: 'No token provided' });
