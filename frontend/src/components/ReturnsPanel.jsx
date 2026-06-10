@@ -4,7 +4,8 @@ import Spinner from './Spinner';
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
+  { value: 'approved', label: 'Approved (awaiting product)' },
+  { value: 'received', label: 'Received & refunded' },
   { value: 'rejected', label: 'Rejected' },
   { value: '', label: 'All' },
 ];
@@ -42,7 +43,12 @@ export default function ReturnsPanel() {
     setRowMsg((s) => ({ ...s, [id]: null }));
     try {
       await api.patch(`/api/returns/${id}`, { action, note });
-      setRowMsg((s) => ({ ...s, [id]: { type: 'ok', text: action === 'approve' ? 'Approved & restocked.' : 'Rejected.' } }));
+      const okText = {
+        approve: 'Approved — awaiting the returned product.',
+        receive: 'Product received: refund issued & restocked.',
+        reject: 'Rejected.',
+      }[action] || 'Updated.';
+      setRowMsg((s) => ({ ...s, [id]: { type: 'ok', text: okText } }));
       load();
     } catch (err) {
       setRowMsg((s) => ({ ...s, [id]: { type: 'err', text: err.message } }));
@@ -109,36 +115,51 @@ export default function ReturnsPanel() {
                 <td style={{ padding: 8 }}>
                   <span style={{
                     display: 'inline-block', padding: '2px 8px', borderRadius: 999,
-                    background: r.status === 'approved' ? '#dcfce7' : r.status === 'rejected' ? '#fee2e2' : '#fef9c3',
-                    color: r.status === 'approved' ? '#166534' : r.status === 'rejected' ? '#991b1b' : '#854d0e',
+                    background: r.status === 'received' ? '#dcfce7' : r.status === 'approved' ? '#dbeafe' : r.status === 'rejected' ? '#fee2e2' : '#fef9c3',
+                    color: r.status === 'received' ? '#166534' : r.status === 'approved' ? '#1e40af' : r.status === 'rejected' ? '#991b1b' : '#854d0e',
                     fontSize: '0.75rem',
                   }}>
-                    {r.status}
+                    {r.status === 'approved' ? 'approved (awaiting)' : r.status}
                   </span>
                   {r.rejectionNote && <div style={{ color: '#666', fontSize: '0.75rem', marginTop: 4 }}>{r.rejectionNote}</div>}
                 </td>
                 <td style={{ padding: 8 }}>
-                  {r.status === 'pending' ? (
+                  {r.status === 'pending' || r.status === 'approved' ? (
                     <div style={{ display: 'flex', gap: 6, flexDirection: 'column' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          disabled={busyId === r.id}
-                          onClick={() => decide(r.id, 'approve')}
-                          style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          disabled={busyId === r.id}
-                          onClick={() => decide(r.id, 'reject')}
-                          style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                        >
-                          Reject
-                        </button>
+                        {r.status === 'pending' && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              disabled={busyId === r.id}
+                              onClick={() => decide(r.id, 'approve')}
+                              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              disabled={busyId === r.id}
+                              onClick={() => decide(r.id, 'reject')}
+                              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {r.status === 'approved' && (
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            disabled={busyId === r.id}
+                            onClick={() => decide(r.id, 'receive')}
+                            style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                          >
+                            Mark Received & Refund
+                          </button>
+                        )}
                       </div>
                       {rowMsg[r.id] && (
                         <span style={{ color: rowMsg[r.id].type === 'ok' ? '#0c7' : '#c33', fontSize: '0.75rem' }}>

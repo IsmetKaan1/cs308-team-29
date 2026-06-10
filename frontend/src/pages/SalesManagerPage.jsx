@@ -4,6 +4,7 @@ import AppHeader from '../components/AppHeader';
 import PricingPanel from '../components/PricingPanel';
 import InvoicesPanel from '../components/InvoicesPanel';
 import RevenuePanel from '../components/RevenuePanel';
+import ReturnsPanel from '../components/ReturnsPanel';
 
 function readStoredSalesUser() {
   try {
@@ -65,6 +66,15 @@ export default function SalesManagerPage() {
             >
               Revenue & Profit
             </button>
+            <button
+              type="button"
+              role="tab"
+              className="category-tab"
+              aria-pressed={activeTab === 'returns'}
+              onClick={() => setActiveTab('returns')}
+            >
+              Returns & Refunds
+            </button>
           </div>
         </div>
       </div>
@@ -83,6 +93,7 @@ export default function SalesManagerPage() {
         {activeTab === 'pricing' && <PricingPanel />}
         {activeTab === 'invoices' && <InvoicesPanel />}
         {activeTab === 'revenue' && <RevenuePanel />}
+        {activeTab === 'returns' && <ReturnsPanel />}
       </main>
     </div>
   );

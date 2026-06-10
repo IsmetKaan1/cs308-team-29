@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const RETURN_STATUSES = ['pending', 'approved', 'rejected'];
+const RETURN_STATUSES = ['pending', 'approved', 'received', 'rejected'];
 
 const returnSchema = new mongoose.Schema({
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
@@ -16,6 +16,8 @@ const returnSchema = new mongoose.Schema({
   status: { type: String, enum: RETURN_STATUSES, default: 'pending', index: true },
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   reviewedAt: { type: Date, default: null },
+  receivedAt: { type: Date, default: null },
+  refundStatus: { type: String, enum: ['none', 'refunded', 'failed'], default: 'none' },
   rejectionNote: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
 });

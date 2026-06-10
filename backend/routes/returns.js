@@ -8,7 +8,8 @@ const requireRole = require('../middleware/roleGuard');
 const { refundPayment } = require('../lib/mockBank');
 
 const router = express.Router();
-const managerOnly = [authenticate, requireRole('product_manager')];
+// Refund requests are evaluated and authorized by the sales manager (REQ 15).
+const reviewerOnly = [authenticate, requireRole('sales_manager')];
 
 const RETURN_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -60,7 +61,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const alreadyRequested = await Return.aggregate([
-      { $match: { orderId: order._id, orderItemId: item._id, status: { $in: ['pending', 'approved'] } } },
+      { $match: { orderId: order._id, orderItemId: item._id, status: { $in: ['pending', 'approved', 'received'] } } },
       { $group: { _id: null, total: { $sum: '$quantity' } } },
     ]);
     const reservedQty = alreadyRequested[0]?.total || 0;
@@ -92,7 +93,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-router.get('/', managerOnly, async (req, res) => {
+router.get('/', reviewerOnly, async (req, res) => {
   try {
     const filter = {};
     if (req.query.status) {
@@ -109,50 +110,74 @@ router.get('/', managerOnly, async (req, res) => {
   }
 });
 
-router.patch('/:id', managerOnly, async (req, res) => {
+// Two-phase flow (REQ 15): the sales manager first evaluates the request
+// ('approve'/'reject'); the refund and restock only happen once the product
+// is physically received back at the store ('receive').
+router.patch('/:id', reviewerOnly, async (req, res) => {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) {
     return res.status(400).json({ error: 'Invalid return id.' });
   }
   const action = String(req.body?.action || '').toLowerCase();
-  if (!['approve', 'reject'].includes(action)) {
-    return res.status(400).json({ error: 'action must be "approve" or "reject".' });
+  if (!['approve', 'reject', 'receive'].includes(action)) {
+    return res.status(400).json({ error: 'action must be "approve", "reject", or "receive".' });
   }
 
   try {
     const ret = await Return.findById(id);
     if (!ret) return res.status(404).json({ error: 'Return not found.' });
-    if (ret.status !== 'pending') {
-      return res.status(409).json({ error: `Return is already ${ret.status}.` });
-    }
 
     if (action === 'approve') {
-      const order = await Order.findById(ret.orderId);
-      if (!order) return res.status(404).json({ error: 'Order not found.' });
-
-      if (order.paymentTransactionId) {
-        const refundResult = await refundPayment({
-          transactionId: order.paymentTransactionId,
-          amount: ret.refundAmount ?? ret.totalRefund,
-        });
-        order.refundStatus = refundResult.ok ? 'refunded' : 'failed';
-        await order.save();
+      if (ret.status !== 'pending') {
+        return res.status(409).json({ error: `Return is already ${ret.status}.` });
       }
-
       ret.status = 'approved';
       ret.reviewedBy = req.user.id;
       ret.reviewedAt = new Date();
-      await Product.updateOne(
-        { _id: ret.productId },
-        { $inc: { quantityInStock: ret.quantity } }
-      );
-    } else {
+    } else if (action === 'reject') {
+      if (ret.status !== 'pending') {
+        return res.status(409).json({ error: `Return is already ${ret.status}.` });
+      }
       ret.status = 'rejected';
       ret.reviewedBy = req.user.id;
       ret.reviewedAt = new Date();
       ret.rejectionNote = typeof req.body?.note === 'string'
         ? req.body.note.trim().slice(0, 500)
         : '';
+    } else {
+      // receive: product is back at the store — authorize refund and restock.
+      if (ret.status !== 'approved') {
+        return res.status(409).json({
+          error: 'Only an approved return can be marked as received.',
+        });
+      }
+
+      const order = await Order.findById(ret.orderId);
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+      // Refund the price paid at purchase time. ret.totalRefund was computed
+      // from the order item's price, which already reflects any discount that
+      // was active when the product was bought (orders.js stores the
+      // discounted price on the order item), so post-campaign returns refund
+      // the discounted amount as required.
+      if (order.paymentTransactionId) {
+        const refundResult = await refundPayment({
+          transactionId: order.paymentTransactionId,
+          amount: ret.totalRefund,
+        });
+        ret.refundStatus = refundResult.ok ? 'refunded' : 'failed';
+        order.refundStatus = refundResult.ok ? 'refunded' : 'failed';
+        await order.save();
+      } else {
+        ret.refundStatus = 'refunded';
+      }
+
+      ret.status = 'received';
+      ret.receivedAt = new Date();
+      await Product.updateOne(
+        { _id: ret.productId },
+        { $inc: { quantityInStock: ret.quantity } }
+      );
     }
 
     await ret.save();
