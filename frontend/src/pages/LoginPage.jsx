@@ -21,7 +21,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(data.user));
       window.dispatchEvent(new Event('authChange'));
       if (data.user?.role === 'product_manager') navigate('/manager');
-      else if (data.user?.role === 'sales_manager') navigate('/sales-manager/dashboard');
+      else if (data.user?.role === 'sales_manager') navigate('/sales');
       else navigate('/');
     } catch (err) {
       setError(err.message);
