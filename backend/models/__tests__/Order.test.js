@@ -105,4 +105,29 @@ describe('Order Model', () => {
     expect(idempotencyIndex).toBeDefined();
     expect(idempotencyIndex[1]).toMatchObject({ unique: true, sparse: true });
   });
+  it('prevents accidental injection of sensitive payment details into the Order JSON', () => {
+    const orderJson = new Order({
+      userId: 'user-999',
+      items: [],
+      totalPrice: 100,
+      cardNumber: '4242424242424242', 
+      cvv: '999',
+      paymentCardLast4: '4242'
+    }).toJSON();
+    
+    expect(orderJson).not.toHaveProperty('cardNumber');
+    expect(orderJson).not.toHaveProperty('cvv');
+  });
+
+  it('validates idempotencyKey is preserved and exposed in JSON output', () => {
+    const testKey = 'idem-test-uuid-12345';
+    const order = new Order({
+      userId: 'user-777',
+      items: [],
+      totalPrice: 50,
+      idempotencyKey: testKey
+    });
+    
+    expect(order.toJSON()).toHaveProperty('idempotencyKey', testKey);
+  });
 });

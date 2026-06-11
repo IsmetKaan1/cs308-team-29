@@ -1,5 +1,7 @@
 const User = require('../models/User');
 
+// Allow the request only if the authenticated user holds one of the given roles.
+
 function requireRole(...roles) {
   const allowed = roles.flat();
   return async (req, res, next) => {

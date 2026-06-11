@@ -2,7 +2,7 @@
  * Mock banking authorizer. Pure functions only — no DB, no I/O, no state.
  *
  * Rule: card numbers whose last 4 digits are "0000" are declined.
- * Everything else is approved. Real bank logic is out of scope.
+ * Everything else is approved. Real bank logic is out of scope of this project.
  */
 
 const { randomBytes } = require('crypto');
