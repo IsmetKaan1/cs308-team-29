@@ -41,10 +41,13 @@ export default function PricingPanel() {
     setDrafts((s) => ({ ...s, [id]: { ...s[id], [key]: value } }));
   };
 
-  const savePricing = async (product) => {
+  // One Save per row: persist price + cost, apply the discount, and notify
+  // wishlist owners — all in a single click.
+  const saveRow = async (product) => {
     const d = drafts[product.id] || {};
     const price = Number(d.price);
     const cost = Number(d.cost);
+    const rate = Number(d.discountRate);
     if (!Number.isFinite(price) || price < 0) {
       setFeedback((s) => ({ ...s, [product.id]: { type: 'err', text: 'Price must be ≥ 0.' } }));
       return;
@@ -53,43 +56,25 @@ export default function PricingPanel() {
       setFeedback((s) => ({ ...s, [product.id]: { type: 'err', text: 'Cost must be ≥ 0.' } }));
       return;
     }
-    setSavingIds((s) => ({ ...s, [product.id]: true }));
-    try {
-      const updated = await api.patch(`/api/products/${product.id}/pricing`, { price, cost });
-      setProducts((list) => list.map((p) => (p.id === product.id ? { ...p, ...updated } : p)));
-      setFeedback((s) => ({ ...s, [product.id]: { type: 'ok', text: 'Saved.' } }));
-    } catch (err) {
-      setFeedback((s) => ({ ...s, [product.id]: { type: 'err', text: err.message } }));
-    } finally {
-      setSavingIds((s) => ({ ...s, [product.id]: false }));
-    }
-  };
-
-  const applyIndividualDiscount = async (product) => {
-    const d = drafts[product.id] || {};
-    const rate = Number(d.discountRate);
     if (!Number.isFinite(rate) || rate < 0 || rate > 90) {
-      setFeedback((s) => ({ ...s, [product.id]: { type: 'err', text: 'Rate must be 0–90.' } }));
+      setFeedback((s) => ({ ...s, [product.id]: { type: 'err', text: 'Discount must be 0–90.' } }));
       return;
     }
     setSavingIds((s) => ({ ...s, [product.id]: true }));
+    setFeedback((s) => ({ ...s, [product.id]: null }));
     try {
-      const data = await api.post('/api/products/discount', {
-        productIds: [product.id],
-        discountRate: rate,
-      });
+      const updated = await api.patch(`/api/products/${product.id}/pricing`, { price, cost });
+      const data = await api.post('/api/products/discount', { productIds: [product.id], discountRate: rate });
       const result = data.results?.[0];
       setProducts((list) => list.map((p) => (
         p.id === product.id
-          ? { ...p, discountRate: rate, discountedPrice: result?.discountedPrice ?? p.discountedPrice }
+          ? { ...p, ...updated, discountRate: rate, discountedPrice: result?.discountedPrice ?? updated.discountedPrice }
           : p
       )));
       const notified = result?.notified || 0;
       setFeedback((s) => ({
         ...s,
-        [product.id]: { type: 'ok', text: rate > 0
-          ? `Discount applied. Notified ${notified} wishlist user(s).`
-          : 'Discount cleared.' },
+        [product.id]: { type: 'ok', text: rate > 0 ? `Saved. Notified ${notified} wishlist user(s).` : 'Saved.' },
       }));
     } catch (err) {
       setFeedback((s) => ({ ...s, [product.id]: { type: 'err', text: err.message } }));
@@ -243,21 +228,12 @@ export default function PricingPanel() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      disabled={!!savingIds[p.id]}
-                      onClick={() => savePricing(p)}
-                      style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                    >
-                      Save price/cost
-                    </button>
-                    <button
-                      type="button"
                       className="btn btn-primary"
                       disabled={!!savingIds[p.id]}
-                      onClick={() => applyIndividualDiscount(p)}
+                      onClick={() => saveRow(p)}
                       style={{ padding: '4px 10px', fontSize: '0.8rem' }}
                     >
-                      Apply discount
+                      {savingIds[p.id] ? 'Saving…' : 'Save'}
                     </button>
                   </div>
                   {fb && (

@@ -316,9 +316,13 @@ router.post('/discount', salesOnly, async (req, res) => {
       const oldDiscounted = Product.computeDiscountedPrice(product.price, oldRate);
       const newDiscounted = Product.computeDiscountedPrice(product.price, rate);
 
-      product.discountRate = rate;
-      product.discountStartedAt = rate > 0 ? new Date() : null;
-      await product.save();
+      // updateOne (not product.save()) so a discount can be applied even to
+      // legacy products that predate some now-required fields — we only touch
+      // the discount fields, not the whole document.
+      await Product.updateOne(
+        { _id: product._id },
+        { $set: { discountRate: rate, discountStartedAt: rate > 0 ? new Date() : null } }
+      );
 
       let notify = { attempted: 0, sent: 0 };
       if (rate > oldRate && rate > 0) {
