@@ -153,13 +153,23 @@ describe('mockBank.authorizePayment', () => {
   expect(authorizePayment({ ...baseInput, amount: -50.5 }).approved).toBe(false);
   expect(authorizePayment({ ...baseInput, amount: undefined }).approved).toBe(false);
   });
-  
   test('gracefully handles completely empty or null payloads without throwing exceptions', () => {
     const nullResult = authorizePayment(null);
     const emptyResult = authorizePayment({});
     
     expect(nullResult.approved).toBe(false);
     expect(emptyResult.approved).toBe(false);
+  });
+
+  test('strictly verifies card masking returns exactly 4 digits and strips full PAN', () => {
+    const input = { ...validInput(), amount: 100 };
+    const result = authorizePayment(input);
+    
+    if (result.approved) {
+      expect(result.cardLast4).toMatch(/^\d{4}$/);
+      expect(result.cardLast4.length).toBe(4);
+      expect(result.cardNumber).toBeUndefined(); 
+    }
   });
 });
 
