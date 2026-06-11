@@ -6,18 +6,27 @@ const { registerTransaction } = require('../lib/paymentStore');
 
 const router = express.Router();
 
-router.post('/mock', authenticate, (req, res) => {
-    const { amount } = req.body || {};
+router.post('/mock', authenticate, async (req, res) => {
+  const { amount } = req.body || {};
 
-    if (amount === undefined || typeof amount !== 'number' || amount <= 0) {
-        return res.status(400).json({
-            approved: false,
-            reason: 'invalid_input',
-            error: 'amount must be a positive number',
-        });
-    }
-    const normalizedAmount = Math.round(amount * 100) / 100;
-    const result = authorizePayment(req.body || {});
+  if (amount === undefined || typeof amount !== 'number' || !Number.isFinite(amount)) {
+    return res.status(400).json({
+      approved: false,
+      reason: 'invalid_input',
+      error: 'amount must be a valid, finite number',
+    });
+  }
+
+  const normalizedAmount = Number.parseFloat(amount.toFixed(2));
+  if (normalizedAmount <= 0) {
+    return res.status(400).json({
+      approved: false,
+      reason: 'invalid_input',
+      error: 'amount must be a positive number',
+    });
+  }
+  const paymentRequest = { ...(req.body || {}), amount: normalizedAmount };
+  const result = authorizePayment(paymentRequest);
 
   if (!result.approved) {
     const status = result.reason === 'invalid_input' ? 400 : 402;
@@ -28,12 +37,25 @@ router.post('/mock', authenticate, (req, res) => {
     });
   }
 
-  registerTransaction(result.transactionId, {
-    userId: req.user.id.toString(),
-    approvedAt: result.approvedAt,
-    cardLast4: result.cardLast4,
-    amount: normalizedAmount,
+  try {
+    await registerTransaction(result.transactionId, {
+      userId: req.user.id.toString(),
+      approvedAt: result.approvedAt,
+      cardLast4: result.cardLast4,
+      cardHolderName: req.body.cardHolderName || '',
+      amount: normalizedAmount,
     });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        approved: false,
+        reason: 'duplicate_transaction',
+        error: 'A transaction with this ID already exists.',
+      });
+    }
+    console.error('Failed to persist payment:', err);
+    return res.status(500).json({ approved: false, reason: 'server_error', error: 'Failed to store payment.' });
+  }
 
   res.json({
     approved: true,

@@ -99,7 +99,7 @@ describe('POST /api/orders Idempotency', () => {
     Cart.updateOne.mockResolvedValue({});
     User.findById.mockResolvedValue({ email: 'test@example.com' });
 
-    consumeTransaction.mockReturnValue({ ok: true, record: { cardLast4: '4242', approvedAt: new Date() } });
+    consumeTransaction.mockResolvedValue({ ok: true, record: { cardLast4: '4242', approvedAt: new Date() } });
   });
 
   test('creates one order and returns the same order on replay, calling consumeTransaction exactly once', async () => {
