@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import Spinner from './Spinner';
 
+const ORDER_STATUSES = [
+  { value: 'processing', label: 'Processing' },
+  { value: 'in-transit', label: 'In Transit' },
+  { value: 'delivered', label: 'Delivered' },
+];
+
 function fmtAddress(a) {
   if (!a) return '';
   return `${a.fullName}, ${a.address}, ${a.city} ${a.postalCode}, ${a.country}`;
@@ -13,6 +19,7 @@ export default function DeliveriesPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [statusSel, setStatusSel] = useState({});
 
   const load = async () => {
     setLoading(true);
@@ -30,13 +37,15 @@ export default function DeliveriesPanel() {
 
   useEffect(() => { load(); }, [filter]);
 
-  const markComplete = async (d, completed) => {
+  const updateStatus = async (d) => {
+    const status = statusSel[d.orderId] || d.orderStatus;
     setBusyId(d.deliveryId);
+    setError('');
     try {
-      await api.patch(`/api/deliveries/${d.deliveryId}/complete`, { completed });
+      await api.patch(`/api/orders/${d.orderId}/status`, { status });
       await load();
     } catch (err) {
-      setError(err.message || 'Could not update.');
+      setError(err.message || 'Could not update status.');
     } finally {
       setBusyId(null);
     }
@@ -77,7 +86,7 @@ export default function DeliveriesPanel() {
               <th style={{ padding: 8 }}>Total (₺)</th>
               <th style={{ padding: 8 }}>Address</th>
               <th style={{ padding: 8 }}>Completed</th>
-              <th style={{ padding: 8 }}>Action</th>
+              <th style={{ padding: 8 }}>Order Status</th>
             </tr>
           </thead>
           <tbody>
@@ -115,15 +124,27 @@ export default function DeliveriesPanel() {
                   </span>
                 </td>
                 <td style={{ padding: 8 }}>
-                  <button
-                    type="button"
-                    className={d.completed ? 'btn btn-secondary' : 'btn btn-primary'}
-                    disabled={busyId === d.deliveryId}
-                    onClick={() => markComplete(d, !d.completed)}
-                    style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                  >
-                    {d.completed ? 'Mark pending' : 'Mark complete'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <select
+                      value={statusSel[d.orderId] || d.orderStatus}
+                      disabled={busyId === d.deliveryId}
+                      onChange={(e) => setStatusSel((s) => ({ ...s, [d.orderId]: e.target.value }))}
+                      style={{ padding: '3px 6px', fontSize: '0.8rem' }}
+                    >
+                      {ORDER_STATUSES.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={busyId === d.deliveryId || (statusSel[d.orderId] || d.orderStatus) === d.orderStatus}
+                      onClick={() => updateStatus(d)}
+                      style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                    >
+                      {busyId === d.deliveryId ? '...' : 'Update'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

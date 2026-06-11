@@ -319,8 +319,18 @@ router.patch('/:id/status', authenticate, requireRole('product_manager'), async 
     return res.status(400).json({ error: `Invalid status. Must be one of: ${ORDER_STATUSES.join(', ')}` });
   }
   try {
-    const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true, runValidators: true });
+    const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    order.status = status;
+    // Keep the per-item delivery flag (the delivery-list "completed" field)
+    // in sync with the order status so the two views never disagree.
+    const delivered = status === 'delivered';
+    for (const item of order.items) {
+      item.delivered = delivered;
+      item.deliveredAt = delivered ? new Date() : null;
+    }
+    await order.save();
     res.json(order);
   } catch {
     res.status(500).json({ error: 'Server error' });
