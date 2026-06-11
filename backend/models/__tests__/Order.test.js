@@ -105,4 +105,17 @@ describe('Order Model', () => {
     expect(idempotencyIndex).toBeDefined();
     expect(idempotencyIndex[1]).toMatchObject({ unique: true, sparse: true });
   });
+  it('prevents accidental injection of sensitive payment details into the Order JSON', () => {
+    const orderJson = new Order({
+      userId: 'user-999',
+      items: [],
+      totalPrice: 100,
+      cardNumber: '4242424242424242', 
+      cvv: '999',
+      paymentCardLast4: '4242'
+    }).toJSON();
+    
+    expect(orderJson).not.toHaveProperty('cardNumber');
+    expect(orderJson).not.toHaveProperty('cvv');
+  });
 });
