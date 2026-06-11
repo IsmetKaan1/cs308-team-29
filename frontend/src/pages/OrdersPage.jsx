@@ -31,6 +31,15 @@ const refundColor = {
   pending: '#c2410c',
 };
 
+const RETURN_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Mirrors the backend rule (returns.js): a delivered order is returnable for
+// 30 days from purchase (or cancellation, whichever applies).
+function returnWindowOpen(order) {
+  const ref = order.cancelledAt || order.createdAt;
+  return !!ref && Date.now() - new Date(ref).getTime() <= RETURN_WINDOW_MS;
+}
+
 function normalizeOrderStatus(status) {
   return STATUS_ALIASES[status] || status;
 }
@@ -208,14 +217,27 @@ export default function OrdersPage() {
                             {(item.price * item.quantity).toFixed(2)} ₺
                           </span>
                           {order.status === 'delivered' && !canUpdateStatus && (
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              style={{ padding: '2px 8px', fontSize: '0.75rem', marginLeft: 8 }}
-                              onClick={(e) => { e.stopPropagation(); requestReturn(order, item); }}
-                            >
-                              Request return
-                            </button>
+                            returnWindowOpen(order) ? (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem', marginLeft: 8 }}
+                                onClick={(e) => { e.stopPropagation(); requestReturn(order, item); }}
+                              >
+                                Request return
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                disabled
+                                title="Return window has expired (30 days after delivery)"
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ padding: '2px 8px', fontSize: '0.75rem', marginLeft: 8, textDecoration: 'line-through', opacity: 0.55, cursor: 'not-allowed' }}
+                              >
+                                Request return
+                              </button>
+                            )
                           )}
                         </div>
                       );
