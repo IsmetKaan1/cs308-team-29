@@ -145,6 +145,13 @@ describe('mockBank.authorizePayment', () => {
     const b = authorizePayment(validInput()).transactionId;
     expect(a).not.toBe(b);
   });
+  test('rejects payment authorization if amount is missing, zero, or negative', () => {
+  const baseInput = validInput();
+  
+  expect(authorizePayment({ ...baseInput, amount: 0 }).approved).toBe(false);
+  expect(authorizePayment({ ...baseInput, amount: -50.5 }).approved).toBe(false);
+  expect(authorizePayment({ ...baseInput, amount: undefined }).approved).toBe(false);
+});
 });
 
 describe('refundPayment', () => {
