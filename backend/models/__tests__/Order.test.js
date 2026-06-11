@@ -118,4 +118,16 @@ describe('Order Model', () => {
     expect(orderJson).not.toHaveProperty('cardNumber');
     expect(orderJson).not.toHaveProperty('cvv');
   });
+
+  it('validates idempotencyKey is preserved and exposed in JSON output', () => {
+    const testKey = 'idem-test-uuid-12345';
+    const order = new Order({
+      userId: 'user-777',
+      items: [],
+      totalPrice: 50,
+      idempotencyKey: testKey
+    });
+    
+    expect(order.toJSON()).toHaveProperty('idempotencyKey', testKey);
+  });
 });
